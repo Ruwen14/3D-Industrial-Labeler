@@ -67,12 +67,24 @@ uint16_t Z_calc_one_shot_timer_max233(uint8_t move_mm);
 // da sonst der Output-Compare-Value (16 bit) überläuft.
 uint16_t XY_calc_one_shot_timer_max82(uint8_t move_mm);
 
+// INTERNAL-USAGE
+// Dieser "One-Shot-Timer" wird genutzt sofern nur eine Bahn X, Y oder Z gefahren wird.
+// Bei parallelem Verfahren wird 'start_multi_one_shot_timer' genutzt.
+void start_one_shot_timer(uint16_t ocrna_);
 
 
 
 
+// INTERNAL-USAGE
+// Da nur noch einer der insgesamt 4x 16Bit Timer übrig ist, müssen wir diesen für das 
+// zeitgleiche Verfahren der XY / Z - Achse über die Register OCR5A / OCR5B aufteilen
+// Der "One-Shot-Timer" generiert hierbei 2 COMP-Interrupts. Einmal bei OCR5B und einmal bei
+// OCR5A. Da bei OCR5A der Timer TCNT5 zurückgesetzt wird muss OCR5B < OCR5A sein !. (S. 146)
+void start_multi_one_shot_timer(uint16_t ocrna_, uint16_t ocrnb_);
 
-
+// INTERNAL-USAGE
+// Disabled den Multi-One-Shot-Interrupt. Wird in der ISR aufgerufen
+void disable_multi_one_shot_timer(void);
 
 
 void Y_move_max82(StepperAxisController* controller, uint8_t move_mm, YAxisDir dir);

@@ -50,7 +50,7 @@ void Z_run_pwm(void)
 	TCCR4B = (1<<WGM42) | (1<<CS41) | (1<<CS40);
 	
 	// Reset Counter
-	TCNT5 = 0;
+	TCNT4 = 0;
 	
 	// Toggle den Output Pin OC4B = PH4 = Z_TAKT
 	TCCR4A |= (1<<COM4B0);
@@ -139,4 +139,67 @@ uint16_t XY_calc_one_shot_timer_max82(uint8_t move_mm)
 	uint16_t OCRNA_rescaled_SI = OCRNA_ / 1000;
 
 	return OCRNA_rescaled_SI;
+}
+
+void start_one_shot_timer(uint16_t ocrna_)
+{
+	// OC5A Timer-Register CTC
+	OCR5A = ocrna_;
+	
+	// Reset da in *disable* potenziell cleared.
+	// WGM52 CTC Mode | (1<<CS52) + (1<<CS50) prescaler 1024
+	TCCR5B = (1<<WGM52) | (1<<CS52) | (1<<CS50);
+	
+	// Clear COM5A1 + COM5A0 for disconnecting OC5A. Usable for Normal port operation (p. 155)
+	TCCR5A &= ~((1<<COM5A1) | (1<<COM5A0));
+	
+	// Enables Output Compare Match Interrupt 'TIMER5_COMPA_vect'
+	TIMSK5 |= (1<<OCIE5A);
+	
+	sei();
+}
+
+void disable_one_shot_timer(void)
+{
+	// DISABLES Output Compare Match Interrupt 'TIMER5_COMPA_vect'
+	TIMSK5 &= ~(1 << OCIE5A);
+	
+	// No clock source. (Timer / Counter stopped)
+	TCCR5B &= ~((1 << CS51) | (1 << CS52) | (1 << CS50));
+}
+
+void start_multi_one_shot_timer(uint16_t ocrna_, uint16_t ocrnb_)
+{
+	// Wir teilen das OC5A/B Timer-Register für CTC
+	OCR5A = ocrna_;
+	OCR5B = ocrnb_;
+	
+	
+	// Reset da in *disable* potenziell cleared.
+	// WGM52 CTC Mode | (1<<CS52) + (1<<CS50) prescaler 1024
+	TCCR5B = (1<<WGM52) | (1<<CS52) | (1<<CS50);
+	
+	// Clear COM5B1 + COM5B0 for disconnecting OC5B. Usable for Normal port operation (p. 155)
+	TCCR5A &= ~((1<<COM5B1) | (1<<COM5B0));
+	// Clear COM5A1 + COM5A0 for disconnecting OC5A. Usable for Normal port operation (p. 155)
+	TCCR5A &= ~((1<<COM5A1) | (1<<COM5A0));
+	
+	// Reset da in *disable* potenziell cleared.
+	// Enables Output Compare Match Interrupt 'TIMER5_COMPB_vect'
+	TIMSK5 |= (1<<OCIE5B);
+	// Enables Output Compare Match Interrupt 'TIMER5_COMPA_vect'
+	TIMSK5 |= (1<<OCIE5A);
+	
+	sei();
+}
+
+void disable_multi_one_shot_timer(void)
+{
+	// DISABLES Output Compare Match Interrupt 'TIMER5_COMPB_vect'
+	TIMSK5 &= ~(1 << OCIE5B);
+	// DISABLES Output Compare Match Interrupt 'TIMER5_COMPA_vect'
+	TIMSK5 &= ~(1 << OCIE5A);
+	
+	// No clock source. (Timer / Counter stopped)
+	TCCR5B &= ~((1 << CS51) | (1 << CS52) | (1 << CS50));
 }
