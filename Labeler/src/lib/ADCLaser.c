@@ -60,3 +60,17 @@ uint16_t ADC_Laser_read(void)
 	// Gibt den aktuellen Wert von ADC aus
 	return ADC;
 }
+
+uint8_t laser_quantize(uint16_t laser_pos, uint8_t low_laser, uint16_t high_laser, uint8_t quant_low, uint8_t quant_high)
+{
+	uint16_t temp = (laser_pos - low_laser) * (quant_high - quant_low);
+	uint16_t temp2 = (high_laser - low_laser) + quant_low;
+	return temp / temp2;
+}
+
+uint16_t laser_quantize_10th_mm(uint16_t laser_pos, uint8_t low_laser, uint16_t high_laser, uint8_t quant_low, uint16_t quant_high)
+{
+	uint32_t temp = (laser_pos - low_laser) * (quant_high - quant_low);
+	uint16_t temp2 = (high_laser - low_laser) + quant_low;
+	return temp / temp2;
+}
