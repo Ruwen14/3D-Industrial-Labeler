@@ -28,9 +28,10 @@ void zaxis_move_clockwise(uint16_t steps)
 	for (uint16_t i = 0; i < steps; ++i )
 	{
 		Z_RISING_EDGE;
-		_delay_us(500);
+		_delay_us(950);
 		Z_FALLING_EDGE;
-		_delay_us(500);
+		_delay_us(950);
+
 	}
 }
 
@@ -76,9 +77,9 @@ void xyaxis_move_right(uint16_t steps)
 	for (uint16_t i = 0; i < steps; ++i )
 	{
 		XY_RISING_EDGE;
-		_delay_us(1000);
+		_delay_us(1500);
 		XY_FALLING_EDGE;
-		_delay_us(1000);
+		_delay_us(1500);
 	}
 }
 void xyaxis_move_left(uint16_t steps)
@@ -90,9 +91,9 @@ void xyaxis_move_left(uint16_t steps)
 	for (uint16_t i = 0; i < steps; ++i )
 	{
 		XY_RISING_EDGE;
-		_delay_us(1000);
+		_delay_us(1500);
 		XY_FALLING_EDGE;
-		_delay_us(1000);
+		_delay_us(1500);
 	}
 }
 
