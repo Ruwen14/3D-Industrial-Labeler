@@ -61,7 +61,7 @@
 #define X_ACTIVE PA3
 
 // Kalibriert manuell
-#define STEPS_PER_MM_X 25
+#define STEPS_PER_MM_X 23
 
 // ***********************************************************************************************************************
 // X-Schrittmotor END
