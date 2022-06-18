@@ -14,6 +14,8 @@
 #include "lib/XYAxisController.h"
 #include "lib/ADCLaser.h"
 #include "lib/LCD.h"
+#include "lib/StepperAxisController.h"
+#include "lib/StepperMotionAxisController.h"
 #include <avr/interrupt.h>
 
 volatile uint8_t limit_x_left = 0;
@@ -25,6 +27,10 @@ volatile uint8_t toogle =0;
 
 
 ZAxisController z_controller = {0};
+	
+volatile StepperAxisController axis_controller = {0};
+
+volatile StepperMotionAxisController controller = {0, {}};
 
 void zaxis_one_shot_timer_init(void)
 {
@@ -118,167 +124,229 @@ uint8_t receive_sentence(char* buffer, uint8_t size)
 	return index + 1;
 }
 
+void drawRectangleWithCross(void)
+{
+	Z_move_max233(&axis_controller, 10, ROTATE_ANTICLOCKWISE);
+	_delay_ms(2000);
+	X_move_max82(&axis_controller, 10, MOVE_RIGHT);
+	_delay_ms(2000);
+	Z_move_max233(&axis_controller, 10, ROTATE_CLOCKWISE);
+	_delay_ms(2000);
+	X_move_max82(&axis_controller, 10, MOVE_LEFT);
+	_delay_ms(2000);
+	ZX_move_diagonal_45d(&axis_controller, 10, ROTATE_ANTICLOCKWISE, MOVE_RIGHT);
+	_delay_ms(2000);
+	ZX_move_diagonal_45d(&axis_controller, 5, ROTATE_ANTICLOCKWISE, MOVE_LEFT);
+	_delay_ms(2000);
+	ZX_move_diagonal_45d(&axis_controller, 5, ROTATE_CLOCKWISE, MOVE_LEFT);
+	_delay_ms(2000);
+	ZX_move_diagonal_45d(&axis_controller, 10, ROTATE_CLOCKWISE, MOVE_RIGHT);
+	_delay_ms(2000);
+	OCR4A = 249;
+	_delay_ms(2000);
+	
+}
+
+void moveRight(void)
+{
+	X_move_max82(&axis_controller, 80, MOVE_RIGHT);
+	_delay_ms(5000);
+	X_move_max82(&axis_controller, 80, MOVE_RIGHT);
+	_delay_ms(5000);
+	
+}
+
+
+void moveLeft(void)
+{
+	X_move_max82(&axis_controller, 80, MOVE_LEFT);
+	_delay_ms(5000);
+	X_move_max82(&axis_controller, 80, MOVE_LEFT);
+	_delay_ms(5000);
+	
+}
+
+
+
+
+void drawNikolausFIFO(void)
+{
+	SMAC_BEGIN_DECLARE_MOTION_SEQUENCE(&controller);
+	SMAC_ADD_MOVE_Z_max233(&controller, 20, Z_ANTICLOCKWISE);
+	SMAC_ADD_MOVE_X_max82(&controller, 20, X_RIGHT);
+	SMAC_ADD_MOVE_Z_max233(&controller, 20, Z_CLOCKWISE);
+	SMAC_ADD_MOVE_X_max82(&controller, 20, X_LEFT);
+	SMAC_ADD_MOVE_45DIAGONAL(&controller, 20, Z_ANTICLOCKWISE, X_RIGHT);
+	SMAC_ADD_MOVE_45DIAGONAL(&controller, 10, Z_ANTICLOCKWISE, X_LEFT);
+	SMAC_ADD_MOVE_45DIAGONAL(&controller, 10, Z_CLOCKWISE, X_LEFT);
+	SMAC_ADD_MOVE_45DIAGONAL(&controller, 20, Z_CLOCKWISE, X_RIGHT);
+	SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
+
+}
+
+
+void drawM(void)
+{
+	// Fahrt zur Start Linie
+	SMAC_ADD_MOVE_Z_max233(&controller, 3, Z_ANTICLOCKWISE);
+	SMAC_ADD_MOVE_Y_max82(&controller, 2, Y_UP);
+	
+		
+	SMAC_ADD_MOVE_X_max82(&controller, 28, X_LEFT);
+	SMAC_ADD_MOVE_45DIAGONAL(&controller, 7, Z_ANTICLOCKWISE, X_RIGHT);
+	SMAC_ADD_MOVE_45DIAGONAL(&controller, 7, Z_ANTICLOCKWISE, X_LEFT);
+	SMAC_ADD_MOVE_X_max82(&controller, 28, X_RIGHT);
+	SMAC_ADD_MOVE_Y_max82(&controller, 2, Y_DOWN);
+	
+	
+	// Fahrt zur Referenzlinie
+	
+	SMAC_ADD_MOVE_Z_max233(&controller, 3, Z_ANTICLOCKWISE);
+	
+}
+
+void drawB(void)
+{
+	// Fahrt zur Start Linie
+	SMAC_ADD_MOVE_Z_max233(&controller, 3, Z_ANTICLOCKWISE);
+	SMAC_ADD_MOVE_Y_max82(&controller, 2, Y_UP);
+	
+	
+	SMAC_ADD_MOVE_X_max82(&controller, 28, X_LEFT);
+	SMAC_ADD_MOVE_Z_max233(&controller, 12, Z_ANTICLOCKWISE);
+	SMAC_ADD_MOVE_45DIAGONAL(&controller, 2, Z_ANTICLOCKWISE, X_RIGHT);
+	SMAC_ADD_MOVE_X_max82(&controller, 10, X_RIGHT);
+	SMAC_ADD_MOVE_45DIAGONAL(&controller, 2, Z_CLOCKWISE, X_RIGHT);
+	SMAC_ADD_MOVE_45DIAGONAL(&controller, 2, Z_ANTICLOCKWISE, X_RIGHT);
+	SMAC_ADD_MOVE_X_max82(&controller, 10, X_RIGHT);
+	SMAC_ADD_MOVE_45DIAGONAL(&controller, 2, Z_CLOCKWISE, X_RIGHT);
+	SMAC_ADD_MOVE_Z_max233(&controller, 12, Z_CLOCKWISE);
+	SMAC_ADD_MOVE_X_max82(&controller, 14, X_LEFT);
+	SMAC_ADD_MOVE_Z_max233(&controller, 12, Z_ANTICLOCKWISE);
+	SMAC_ADD_MOVE_Y_max82(&controller, 2, Y_DOWN);
+	
+
+	// FAhrt zur refernzlinie
+	SMAC_ADD_MOVE_Z_max233(&controller, 5, Z_ANTICLOCKWISE);
+	SMAC_ADD_MOVE_X_max82(&controller, 14, X_RIGHT);
+	
+}
+
 
 
 
 // OC5B
 int main(void)
 {
-
-	uart_init();	
+	uart_init();
 	lcd_init();
-	ADC_Laser_init();
+	XYZ_init();
 	
-// 	while(1)
-// 	{
-// 		uart_send_16bit(ADC_Laser_read());
-// 	}
+	SMAC_BEGIN_DECLARE_MOTION_SEQUENCE(&controller);
 	
+	SMAC_ADD_MOVE_Y_max82(&controller, 2, Y_DOWN);
 	
+	for (uint8_t i = 0; i < 4; i++)
+	{
+		drawM();
+		drawB();
+		drawM();
+		drawB();
+	}
 	
-	
-	
-// 	uint8_t i = 0;						// angezeigte Variable
-// 	char lcd_str[17];					// Array für Display-Ausgabe
+	SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
 // 	
-// 	lcd_init();
-// 	lcd_text("Bald Wochenende  bla");
-// 	lcd_cmd(0xc0);						// Cursor positioniert
+// // // 	
+// 	SMAC_BEGIN_DECLARE_MOTION_SEQUENCE(&controller);
+// 	SMAC_ADD_MOVE_Y_sub_mm_max255(&controller, 15, Y_UP);
+// 	SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
+	
+	
+	
+	
+	
+// 	SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
+	
+// 	ADC_Laser_init();
 // 	
+// 	SMAC_ADD_MOVE_Y_max82(&controller, 80, Y_DOWN);
 // 	
-// 	
-// 	lcd_text("i = ");
-// 	
-// 	lcd_zahl(i, lcd_str);				// Umwandlung von i in Textzeichen
-// 	lcd_text(lcd_str);					// Ausgabe auf Display
+// 	SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
 	
-	
-	
-	
-	
-// 	while (1)
-// 	{
-// 			uart_send_16bit(uart_rec());
-// 	}
-	
-	
-	
-	
-	char text[33] = "";
 	
 	while(1)
 	{
-		uart_send(receive_sentence(text, 33));
+		
 	}
 	
 	
 	
-	
-// 	char Line[33];      // String mit maximal 32 zeichen
-// 	char text[2];
-// 
-// 	while(1)
-// 	{
-// 		//uart_puts(uart_gets( Line, sizeof( Line ) ));
-// 		//text = uart_rec());
-// 		_delay_ms(50);
-// 		lcd_text(text);
-// 		_delay_ms(50);
-// 		uart_send(text);
-// 		_delay_ms(50);
-// 	}
-
-	
-	
-	
-		
-// 	uart_init();
-// 	limit_swiches_init();
-	
-
-// 	_delay_ms(1000);
-// 	XY_stop_pwm();
-	
-
-	
-	
-	
-// 	zaxis_pwm_init_start();
-// 	zaxis_one_shot_timer_init();
-// 	zaxis_pwm_init_start();
-
-
-// 	xyaxis_init();
-// 	xyaxis_move_down(250);
-	
-	
-// 	zaxis_init();
-// 	zaxis_move_clockwise(90);
-		
-// 		zaxis_pwm_init_start();
-		
-    /* Replace with your application code */
-    while (1) 
-    {
-		
-		
-// 		uart_send(limit_x_left);
-
-		
-		
-	
-// 		uart_send(limit_y_top);
-// 		uart_send(limit_y_bottom);
-// 		uart_send(limit_x_left);
-// 		uart_send(limit_x_right);
-
-// 		_delay_ms(10);
-		
-		
-// 		while (!(UCSR3A & (1<< UDRE3)));
-// 		UDR3 = j;
-// 		j++;
-// 		_delay_ms(100);
-		
-// 			UDR3 = 30;
-// 			_delay_ms(100);
-			
-// 		if (IsBitSet(UCSR0A, UDRE0))
-// 		{
-// 			UDR0 = j;
-// 			_delay_ms(1000);
-// 		}
-		
-    }
 }
 
+// INTERRUPT TESTING
+
+ISR(TIMER5_COMPA_vect)
+{
+	SMAC_disable_XY_pwm();
+	SMAC_disable_Z_pwm();
+	SMAC_disable_multi_one_shot_timer();
+	OCR4A = 249; // Reset sofern wir diagonal gefahren sind.
+	if (!(FIFOSeqBuffer_empty(&controller.sequencebuffer)))
+	{
+		MotionSequence seq;
+		FIFOSeqBuffer_pop(&controller.sequencebuffer, &seq);
+		SMAC_start_new_motion_sequence(&controller, &seq);
+	}
+	
+	
+}
 
 // ***********************************************************************************************************************
 // INTERRUPT SERVICE ROUTINES BEGIN
 // ***********************************************************************************************************************
 
-ISR(TIMER5_COMPB_vect)
-{
-	Z_stop_pwm();
-	Z_disable_one_shot_timer();
-	
-	// 	if (toogle == 0)
-	// 	{
-	// 		BitSet(PORTL, Z_DIR);
-	// 		toogle = 1;
-	// 	}
-	// 	else
-	// 	{
-	// 		BitClear(PORTL, Z_DIR);
-	// 		toogle = 0;
-	
-	// 	}
-	
-}
+// Verantwortlich für das Ausschalten der Stepper-PWM nach dem Prinzip des One-Shot-Timer's.
+// Sofern Zwei Achsen gleichzeitig betrieben werden (XZ oder YZ), werden diese über TIMER5_COMPB_vect + TIMER5_COMPA_vect
+// synchronisiert (2x One-Shot-Timer aus)
+// ISR(TIMER5_COMPA_vect)
+// {
+// 	// Dieser ISR wird nach TIMER5_COMPB_vect aufgerufen
+// 	// Egal ob wir ein- oder zweiachsig verfahren, können wir hier einfach
+// 	// alle PWM's ausschalten. 
+// 	XY_disable_pwm();
+// 	Z_disable_pwm();
+// 	
+// 	// Im Falle beim einachsigen Verfahren, schaltet 'disable_multi_one_shot_timer'
+// 	// auch automatisch den 'Single'-One-Shot-Timer aus.
+// 	disable_multi_one_shot_timer();
+// 	RESET_ALL_AXIS_FLAGS(axis_controller.stateflags);
+// 	uart_string("TimerA");
+// 	
+// 	
+// }
 
-ISR(TIMER5_COMPA_vect)
-{
-}
+
+// Sofern Zwei Achsen gleichzeitig betrieben werden (XZ oder YZ) kommt der 'TIMER5_COMPB_vect' zusätzlich zum Einsatz.
+// Dieser stoppt immer diejenige der beiden Achsen, welche kürzer betrieben wird, um den geforderten Weg zu verfahren.
+// Aus der Bedingung OCR5B < OCR5A (siehe S. 146 Atmega2560 Datenblatt), wird diese ISR immer vor der obigen ISR aufgerufen.
+// ISR(TIMER5_COMPB_vect)
+// {
+// 	if (IS_DUAL_AXIS_MOVING(axis_controller.stateflags))
+// 	{
+// 		if (IS_Z_USING_OCR5B(axis_controller.stateflags))
+// 		{
+// 			uart_string("TimerB_disableZ");
+// 	
+// 			Z_disable_pwm();
+// 		}
+// 		else
+// 		{
+// 			uart_string("TimerB_disableXY");
+// 			XY_disable_pwm();
+// 		}
+// 		DISABLE_TIMER5_COMPB_vect;
+// 	}
+// }
 
 
 
@@ -302,7 +370,6 @@ ISR(INT2_vect)
 	if (!IsBitSet(PIND, X_LEFT_LIM_PIN))
 	{
 		limit_x_left = 1;
-		XY_stop_pwm();
 		
 	}
 	else
