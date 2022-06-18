@@ -6,6 +6,7 @@
  */ 
 
 #include "StepperAxisController.h"
+#include "uart.h"
 
 void XYZ_init(void)
 {
@@ -34,14 +35,60 @@ void XYZ_init(void)
 	// Z-Stepper 500 Hz
 	OCR4A = 249;
 	
+	
 	// X-Stepper 500 Hz
 	OCR3A = 249;
 		
 	// Y-Stepper 500 Hz
 	OCR1A = 249;
+}
+
+void Z_set_dir(ZAxisDir dir)
+{
+	if (dir == ROTATE_ANTICLOCKWISE) {
+		BitSet(PORTL, Z_DIR);
+	}
 	
+	else if (dir == ROTATE_CLOCKWISE) {
+		BitClear(PORTL, Z_DIR);
+	}
 	
+	else {
+		return;
+	}
+}
+
+void Y_set_dir(YAxisDir dir)
+{
+	if (dir == MOVE_UP) {
+		BitSet(PORTA, Y_DIR);
+		BitClear(PORTA, X_DIR);
+	}
 	
+	else if (dir == MOVE_DOWN) {
+		BitClear(PORTA, Y_DIR);
+		BitSet(PORTA, X_DIR);
+	}
+	
+	else {
+		return;
+	}
+}
+
+void X_set_dir(XAxisDir dir)
+{
+	if (dir == MOVE_LEFT) {
+		BitClear(PORTA, Y_DIR);
+		BitClear(PORTA, X_DIR);
+	}
+	
+	else if (dir == MOVE_RIGHT) {
+		BitSet(PORTA, Y_DIR);
+		BitSet(PORTA, X_DIR);
+	}
+	else {
+		return;
+	}
 }
 
 void Z_run_pwm(void)
@@ -122,7 +169,7 @@ uint16_t Z_calc_one_shot_timer_max233(uint8_t move_mm)
 }
 
 // Die Werte sind zwischenzeitlich um den Faktor 1000 hochskaliert, um eine Auflösung von 1 ms zu garantieren ohne
-// auf Gleitkommazahlen auszuweichen. Parameter move_mm wird bereits in den Z_move*...-Operationen auf <=82 kontrolliert.
+// auf Gleitkommazahlen auszuweichen. Parameter move_mm wird bereits in den *_move*...-Operationen auf <=82 kontrolliert.
 uint16_t XY_calc_one_shot_timer_max82(uint8_t move_mm)
 {
 	// Folgende Operationen sind bestimmt auch als Shifting-Operationen durchzuführen.
@@ -203,3 +250,125 @@ void disable_multi_one_shot_timer(void)
 	// No clock source. (Timer / Counter stopped)
 	TCCR5B &= ~((1 << CS51) | (1 << CS52) | (1 << CS50));
 }
+
+void Y_move_max82(StepperAxisController* controller, uint8_t move_mm, YAxisDir dir)
+{
+	Y_set_dir(dir);
+	
+	uint16_t oneshot_val = XY_calc_one_shot_timer_max82(move_mm);
+	RESET_ALL_AXIS_FLAGS(controller->stateflags);
+	SET_FLAG_Y_MOVING(controller->stateflags);
+	SET_FLAG_STEPPER_MOVING(controller->stateflags);
+	start_one_shot_timer(oneshot_val);
+	XY_run_pwm();
+	
+}
+
+void X_move_max82(StepperAxisController* controller, uint8_t move_mm, XAxisDir dir)
+{
+	X_set_dir(dir);
+	
+	uint16_t oneshot_val = XY_calc_one_shot_timer_max82(move_mm);
+	
+	// compiler will collapse in one instructrion
+	RESET_ALL_AXIS_FLAGS(controller->stateflags);
+	SET_FLAG_X_MOVING(controller->stateflags);
+	SET_FLAG_STEPPER_MOVING(controller->stateflags);
+	start_one_shot_timer(oneshot_val);
+	XY_run_pwm();
+
+}
+
+void Z_move_max233(StepperAxisController* controller, uint8_t move_mm, ZAxisDir dir)
+{
+	Z_set_dir(dir);
+	
+	uint16_t oneshot_val = Z_calc_one_shot_timer_max233(move_mm);
+	
+	// compiler will collapse in one instructrion
+	RESET_ALL_AXIS_FLAGS(controller->stateflags);
+	SET_FLAG_Z_MOVING(controller->stateflags);
+	SET_FLAG_STEPPER_MOVING(controller->stateflags);
+	start_one_shot_timer(oneshot_val);
+	Z_run_pwm();
+}
+
+void ZX_move_parallel(StepperAxisController* controller, uint8_t z_move_mm, ZAxisDir zdir, uint8_t x_move_mm, XAxisDir xdir)
+{
+	Z_set_dir(zdir);
+	X_set_dir(xdir);
+	
+	uint16_t z_oneshot_val = Z_calc_one_shot_timer_max233(z_move_mm);
+	uint16_t x_oneshot_val = XY_calc_one_shot_timer_max82(x_move_mm);
+	
+	
+	// compiler will collapse in one instructrion
+	RESET_ALL_AXIS_FLAGS(controller->stateflags);
+	SET_FLAG_DUAL_AXIS_MOVING(controller->stateflags);
+	SET_FLAG_Z_MOVING(controller->stateflags);
+	SET_FLAG_X_MOVING(controller->stateflags);
+	
+// 	// Parameter OCRNA has to be bigger than OCRNB
+	if (z_oneshot_val > x_oneshot_val) {
+		start_multi_one_shot_timer(z_oneshot_val, x_oneshot_val);
+	}
+	
+	else {
+		SET_FLAG_Z_USING_OCR5B(controller->stateflags);
+		start_multi_one_shot_timer(x_oneshot_val, z_oneshot_val);
+	}
+
+	
+	Z_run_pwm(); 	
+	XY_run_pwm();
+}
+
+void ZY_move_parallel(StepperAxisController* controller, uint8_t z_move_mm, ZAxisDir zdir, uint8_t y_move_mm, YAxisDir ydir)
+{
+	Z_set_dir(zdir);
+	Y_set_dir(ydir);
+	
+	uint16_t z_oneshot_val = Z_calc_one_shot_timer_max233(z_move_mm);
+	uint16_t y_oneshot_val = XY_calc_one_shot_timer_max82(y_move_mm);
+	
+	// compiler will collapse in one instructrion
+	RESET_ALL_AXIS_FLAGS(controller->stateflags);
+	SET_FLAG_DUAL_AXIS_MOVING(controller->stateflags);
+	SET_FLAG_Z_MOVING(controller->stateflags);
+	SET_FLAG_Y_MOVING(controller->stateflags);
+	
+	if (z_oneshot_val > y_oneshot_val) {
+		start_multi_one_shot_timer(z_oneshot_val, y_oneshot_val);
+	}
+	
+	else {
+		SET_FLAG_Z_USING_OCR5B(controller->stateflags);
+		start_multi_one_shot_timer(y_oneshot_val, z_oneshot_val);
+	}
+	
+	Z_run_pwm();
+	XY_run_pwm();
+}
+
+void ZX_move_diagonal_45d(StepperAxisController* controller, uint8_t heightWidth_mm, ZAxisDir zdir, XAxisDir xdir)
+{
+	Z_set_dir(zdir);
+	X_set_dir(xdir);
+	
+	uint16_t oneshot_val = XY_calc_one_shot_timer_max82(heightWidth_mm);
+	
+	
+	
+	
+	// compiler will collapse in one instructrion
+	RESET_ALL_AXIS_FLAGS(controller->stateflags);
+	SET_FLAG_DUAL_AXIS_MOVING(controller->stateflags);
+	SET_FLAG_Z_MOVING(controller->stateflags);
+	SET_FLAG_X_MOVING(controller->stateflags);
+	
+	OCR4A = 640;
+	start_one_shot_timer(oneshot_val);;
+	Z_run_pwm();
+	XY_run_pwm();
+}
+	
