@@ -38,7 +38,7 @@ void Z_start_pwm(void)
 	TCCR4B = (1<<WGM42) | (1<<CS41) | (1<<CS40);
 	
 	// Reset Counter
-	TCNT5 = 0;
+	TCNT4 = 0;
 	
 	// Toggle den Output Pin OC4B = PH4 = Z_TAKT
 	TCCR4A |= (1<<COM4B0);
