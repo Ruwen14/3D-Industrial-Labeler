@@ -22,7 +22,7 @@ void uart_send(unsigned char data);
 
 void uart_send_16bit(uint16_t data);
 
-char uart_rec(void);
+unsigned char uart_rec(void);
 
 
 #endif /* UART_H_ */

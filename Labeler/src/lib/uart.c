@@ -49,12 +49,11 @@ void uart_send_32bit(uint32_t data)
 	uart_send_16bit((data >> 16) & 0xffff);
 }
 
-char uart_rec(void)
+unsigned char uart_rec(void)
 {
 	while(!(UCSR0A & (1<<RXC0)));
 	
 	return UDR0;
-	
 }
 
 
@@ -89,7 +88,7 @@ void uart_gets( char* Buffer, uint8_t MaxLen )
 	// Sammle solange Zeichen, bis:
 	// * entweder das String Ende Zeichen kam
 	// * oder das aufnehmende Array voll ist
-	while( NextChar != '\n' && StringLen < MaxLen - 1 ) {
+	while( NextChar != '\0' && StringLen < MaxLen - 1 ) {
 		*Buffer++ = NextChar;
 		StringLen++;
 		NextChar = uart_get();
@@ -109,8 +108,6 @@ void uart_gets( char* Buffer, uint8_t MaxLen )
 int uart_putc(unsigned char c)
 {
 	while (!(UCSR0A & (1<<UDRE0)))  /* warten bis Senden moeglich */
-	{
-	}
 
 	UDR0 = c;                      /* sende Zeichen */
 	return 0;
