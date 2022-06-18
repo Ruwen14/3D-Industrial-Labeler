@@ -44,15 +44,30 @@
     <avrtoolserialnumber />
     <avrdeviceexpectedsignature>0x1E9801</avrdeviceexpectedsignature>
     <com_atmel_avrdbg_tool_simulator>
+      <ToolOptions>
+        <InterfaceProperties>
+        </InterfaceProperties>
+        <InterfaceName>
+        </InterfaceName>
+      </ToolOptions>
+      <ToolType>com.atmel.avrdbg.tool.simulator</ToolType>
+      <ToolNumber>
+      </ToolNumber>
+      <ToolName>Simulator</ToolName>
+    </com_atmel_avrdbg_tool_simulator>
+    <avrtoolinterface />
+    <custom>
       <ToolOptions xmlns="">
         <InterfaceProperties>
         </InterfaceProperties>
+        <InterfaceName>
+        </InterfaceName>
       </ToolOptions>
-      <ToolType xmlns="">com.atmel.avrdbg.tool.simulator</ToolType>
+      <ToolType xmlns="">custom</ToolType>
       <ToolNumber xmlns="">
       </ToolNumber>
-      <ToolName xmlns="">Simulator</ToolName>
-    </com_atmel_avrdbg_tool_simulator>
+      <ToolName xmlns="">Custom Programming Tool</ToolName>
+    </custom>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
@@ -144,6 +159,12 @@
     <Compile Include="src\lib\constants.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\lib\DrawingAlphabetLib.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\lib\DrawingAlphabetLib.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\lib\LCD.c">
       <SubType>compile</SubType>
     </Compile>
@@ -166,6 +187,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\lib\StepperAxisController.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\lib\StepperMotionAxisController.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\lib\StepperMotionAxisController.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\lib\uart.c">
