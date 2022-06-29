@@ -30,7 +30,7 @@ ZAxisController z_controller = {0};
 	
 volatile StepperAxisController axis_controller = {0};
 
-volatile StepperMotionAxisController controller = {0, {}};
+volatile StepperMotionAxisController controller = {0, MODE_NORMAL, {}};
 
 void zaxis_one_shot_timer_init(void)
 {
@@ -147,26 +147,6 @@ void drawRectangleWithCross(void)
 	
 }
 
-void moveRight(void)
-{
-	X_move_max82(&axis_controller, 80, MOVE_RIGHT);
-	_delay_ms(5000);
-	X_move_max82(&axis_controller, 80, MOVE_RIGHT);
-	_delay_ms(5000);
-	
-}
-
-
-void moveLeft(void)
-{
-	X_move_max82(&axis_controller, 80, MOVE_LEFT);
-	_delay_ms(5000);
-	X_move_max82(&axis_controller, 80, MOVE_LEFT);
-	_delay_ms(5000);
-	
-}
-
-
 
 
 void drawNikolausFIFO(void)
@@ -233,72 +213,303 @@ void drawB(void)
 }
 
 
+uint16_t round_integers(uint16_t zahl, uint8_t n)
+{
+	
+
+	
+	// Hunderter abziehen
+	uint8_t einer = 0;
+	
+	uint16_t zehner = zahl/n;					// Zehnerstelle ermitteln
+	einer = zahl - zehner * n;					// Zehner abziehen
+	
+	if (zehner > 0 )
+	{
+		if (einer >= 5)
+		{
+			return (zehner+1) * n;
+		}
+		else
+		{
+			return zahl;
+		}
+	}
+	
+	else
+	{
+		return zahl;
+	}
+	return 0;
+}
+
+
+uint16_t int_div_16(uint16_t data)
+{
+	return ((data +8) >> 4);
+}
+
+uint16_t laser_read_average_max64(uint8_t n)
+{
+	uint16_t sum = 0;
+	for(uint8_t i = 0; i < n; i++)
+	{
+		uint16_t laser_data = ADC_Laser_read();
+		sum = sum + laser_quantize_10th_mm(laser_data, 2, 1003, 0, 503);
+	}
+	
+	
+// 	uart_send_16bit(sum/n);
+	
+// 	uart_send_16bit(round_integers(sum, n) / n);
+	
+	
+// 	uint16_t avg = int_div_16(sum);
+	
+	uint16_t avg = round_integers(sum, n)  / n;
+	return avg;
+}
+
+
+void SMAC_return_home(void)
+{
+// 	if (IsBitSet DOWN && IsBitSet RIGHT)
+// 	{
+// 		return;
+// 	}
+// 	else
+// 	{
+// 		// Drive a bit up && Drive a bit low
+// 		
+// 		// Then Y_PWM_DOWN (inside trigger drive left)	
+// 	}
+
+		
+}
+
+
+void SMAC_GO_MEAS_RANGE(StepperMotionAxisController* c, uint8_t* state)
+{
+	if (!c->stateflags == 0)
+	{
+		return;
+	}
+	
+	switch(*state)
+	{
+		case 0:
+			SMAC_BEGIN_DECLARE_MOTION_SEQUENCE(c);
+// 			SMAC_ADD_MOVE_X_max82(c, 60, X_RIGHT);
+// 			SMAC_ADD_MOVE_X_max82(c, 60, X_RIGHT);
+			SMAC_ADD_MOVE_Y_max82(c, 30, Y_UP);
+			
+			SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
+			*state += 1;
+			break;
+	
+		case 1:
+			{
+				uint16_t data = laser_read_average_max64(10);
+				if (data > 450)
+				{
+					SMAC_BEGIN_DECLARE_MOTION_SEQUENCE(c);
+					SMAC_ADD_MOVE_Y_max82(c, 25, Y_UP);
+					SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
+				}
+				else
+				{
+					*state +=1;
+				}
+				break;
+			}
+		
+		case 2:
+			break;
+		
+	}
+}
+
+
+
+
+
+
+uint8_t SMAC_GO_DRAWING_LEVEL(StepperMotionAxisController* c, uint8_t oldstate)
+{
+	if (oldstate == 1)
+	{
+		return 1;
+	}
+	
+	if (!FIFOSeqBuffer_empty(&c->sequencebuffer))
+	{
+		return 0;
+	}
+	
+	
+	// Nimm 90% von 
+	uint16_t data = (laser_read_average_max64(10) * 9 ) / 10;
+	
+	if (data == 0)
+	{
+		return 1;
+	}
+	else
+	{
+		  
+		// Diese Zahl kann nicht overflowen, weil Wertebereich von data nicht ausgereizt wird.
+		uint8_t mm = data / 10;
+		uint8_t tenth_mm = data - mm * 10;
+		SMAC_BEGIN_DECLARE_MOTION_SEQUENCE(c);
+		if (mm != 0)
+		{
+			SMAC_ADD_MOVE_Y_max82(c, mm, Y_UP);
+		}
+		
+		if (tenth_mm != 0)
+		{
+			SMAC_ADD_MOVE_Y_sub_mm_max255(c, tenth_mm, Y_UP);
+		}
+		SMAC_END_DECLARE_MOTION_SEQUENCE(c);		
+		
+		return 0;
+	}
+	
+				
+	
+	
+	
+}
+
+
 
 
 // OC5B
 int main(void)
 {
 	uart_init();
+	limit_swiches_init();
 	lcd_init();
+	ADC_Laser_init();
 	XYZ_init();
 	
-	SMAC_BEGIN_DECLARE_MOTION_SEQUENCE(&controller);
 	
-	SMAC_ADD_MOVE_Y_max82(&controller, 2, Y_DOWN);
+// 	uint8_t goMeasFlag = 0;
+		
+// 	uint8_t drawingLevelFlag = 0;
 	
-	for (uint8_t i = 0; i < 4; i++)
-	{
-		drawM();
-		drawB();
-		drawM();
-		drawB();
-	}
+// 	_delay_ms(3000);
 	
-	SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
 // 	
-// // // 	
+// 	for (uint8_t i = 0; i < 4; i++)
+// 	{
+// 		drawM();
+// 		drawB();
+// 		drawM();
+// 		drawB();
+// 	}
+	
+	
+	
+// // 	
+// 	_delay_ms(3000);
+// 
+// 	uart_send_16bit(123);
+// 	uart_send_16bit(123);
+// 	uart_send_16bit(123);
+// 	uart_send_16bit(123);
+// 	uart_send_16bit(123);
+// 	uart_send_16bit(123);
+	
+	
 // 	SMAC_BEGIN_DECLARE_MOTION_SEQUENCE(&controller);
-// 	SMAC_ADD_MOVE_Y_sub_mm_max255(&controller, 15, Y_UP);
+// // 	SMAC_ADD_MOVE_Y_DRAWING_LEVEL(&controller);
+// // 	SMAC_ADD_MOVE_Y_max82(&controller, 24, Y_DOWN);
+// 	SMAC_ADD_MOVE_Y_max82(&controller, 1, Y_UP);
+// // 	SMAC_ADD_MOVE_Y_max82(&controller, 14, Y_UP);
+// // // 	SMAC_ADD_MOVE_Y_sub_mm_max255(&controller, 218, Y_DOWN);
+// // // // // 	
+// // // 	SMAC_ADD_MOVE_Y_sub_mm_max255(&controller, 1, Y_UP);
 // 	SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
-	
-	
-	
-	
-	
-// 	SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
-	
-// 	ADC_Laser_init();
-// 	
-// 	SMAC_ADD_MOVE_Y_max82(&controller, 80, Y_DOWN);
-// 	
-// 	SMAC_END_DECLARE_MOTION_SEQUENCE(&controller);
-	
-	
+
 	while(1)
 	{
 		
+// 		uart_send_16bit(SMAC_calc_one_shot_timer_XY_10th_mm_max820(820));
+// 		uart_send_16bit(SMAC_calc_one_shot_timer_XY_max82(50));
+// 		
+		
+// 		drawingLevelFlag = SMAC_GO_DRAWING_LEVEL(&controller, drawingLevelFlag);
+		
+// 		uint16_t data = (laser_read_average_max64(10) * 9 ) / 10;
+	
+// 		SMAC_GO_DRAWING_LEVEL
+		
+		
+		
+		
+// 		SMAC_GO_MEAS_RANGE(&controller, &goMeasFlag);
+
+		
+
+
+
+		
+// 		uint16_t laser_data = ADC_Laser_read();
+// 		uint16_t data = laser_quantize_10th_mm(laser_data, 2, 1003, 0, 503); // In wirklichkeit 55
+		
+		
+		uint16_t data  = ADC_Laser_read_mean();
+		uart_send_16bit(data);
+		
+		
+		
+// 		uart_send(limit_x_left);
+// 		uart_send(limit_y_bottom);
+		
 	}
-	
-	
-	
 }
 
 // INTERRUPT TESTING
 
 ISR(TIMER5_COMPA_vect)
 {
+	// Für eine ISR ist dies zugegebenermassen vergleichsweise viel Quellcode. Es sei aber bedacht, dass diese
+	// ISR den Übergang zweier Fahrtsequenzen koordiniert. Dies ist weder zeitkritisch und wird auch nicht häufig aufgerufen.
+	
+	// TODO: Erlaubte Nested Interrupt durch Endlagenschalter.
+	
+	
 	SMAC_disable_XY_pwm();
 	SMAC_disable_Z_pwm();
 	SMAC_disable_multi_one_shot_timer();
 	OCR4A = 249; // Reset sofern wir diagonal gefahren sind.
-	if (!(FIFOSeqBuffer_empty(&controller.sequencebuffer)))
+	
+	
+	if (controller.mode == MODE_SETUP_DRAWING_LEVEL)
 	{
-		MotionSequence seq;
-		FIFOSeqBuffer_pop(&controller.sequencebuffer, &seq);
-		SMAC_start_new_motion_sequence(&controller, &seq);
+// 		uart_send(1);
+		MotionSequence seqD = {0, 0, AXIS_MOVE_DRAWING_LEVEL};
+		SMAC_start_new_motion_sequence(&controller, &seqD);
 	}
 	
-	
+	if (controller.mode == MODE_NORMAL)
+	{
+// 		uart_send(0);
+
+		if (!(FIFOSeqBuffer_empty(&controller.sequencebuffer)))
+		{
+		
+			MotionSequence seq;
+			FIFOSeqBuffer_pop(&controller.sequencebuffer, &seq);
+			SMAC_start_new_motion_sequence(&controller, &seq);
+		}
+		else
+			controller.stateflags = 0;
+		
+	}
+
+
 }
 
 // ***********************************************************************************************************************
@@ -356,6 +567,8 @@ ISR(INT3_vect)
 		if (!IsBitSet(PIND, Y_BOTTOM_LIM_PIN))
 		{
 			limit_y_bottom = 1;
+// 			SMAC_disable_Z_pwm();
+			
 		}
 		else
 		{

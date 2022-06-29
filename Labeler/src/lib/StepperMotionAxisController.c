@@ -6,6 +6,7 @@
  */ 
 
 #include "StepperMotionAxisController.h"
+#include "uart.h"
 
 uint8_t FIFOSeqBuffer_empty(FIFOSeqBuffer* buf)
 {
@@ -363,6 +364,7 @@ void SMAC_END_DECLARE_MOTION_SEQUENCE(StepperMotionAxisController* c)
 	// Trigger First sequence
 	if (!(FIFOSeqBuffer_empty(&c->sequencebuffer)))
 	{
+		c->stateflags = 1;
 		MotionSequence seq;
 		FIFOSeqBuffer_pop(&c->sequencebuffer, &seq);
 		SMAC_start_new_motion_sequence(c, &seq);
@@ -443,6 +445,19 @@ void SMAC_ADD_MOVE_Y_sub_mm_max255(StepperMotionAxisController* c, uint8_t y_10t
 	FIFOSeqBuffer_push(&c->sequencebuffer, seq);
 }
 
+void SMAC_ADD_MOVE_MEAS_RANGE(StepperMotionAxisController* c)
+{
+// 	MotionSequence seq = {25, 0, AXIS_MOVE_MEAS_RANGE};
+// 	FIFOSeqBuffer_push(&c->sequencebuffer, seq);
+	
+}
+
+void SMAC_ADD_MOVE_Y_DRAWING_LEVEL(StepperMotionAxisController* c)
+{
+	MotionSequence seq = {0, 0, AXIS_MOVE_DRAWING_LEVEL};
+	FIFOSeqBuffer_push(&c->sequencebuffer, seq);
+}
+
 static void _trigger_motion_X(StepperMotionAxisController* c, MotionSequence* seq)
 {
 	uint16_t oneshot_val = SMAC_calc_one_shot_timer_XY_max82(seq->move_XY);
@@ -486,6 +501,66 @@ static void _trigger_motion_diagonal(StepperMotionAxisController*c, MotionSequen
 	SMAC_start_one_shot_timer(oneshot_val);
 	SMAC_run_XY_pwm();
 	SMAC_run_Z_pwm();
+}
+
+static void _trigger_motion_drawing_level(StepperMotionAxisController*c, MotionSequence* seq)
+{
+	uint16_t laser_data = ADC_Laser_read();
+	uint16_t y_dist = laser_quantize_10th_mm(laser_data, 2, 1003, 0, 503);
+	
+	// Schlitten muss im Messbereich sein!
+// 	if (y_dist >= STEPPER_INSIDE_MEAS_RANGE)
+// 		return;	
+
+	// Extrahiere mm und 1/10 mm aus y_dist(dezimm). Speicher in uin8_t OK!, da y_dist den 16-Bit Werte-Bereich nicht ausnutzt.
+	uint8_t mm = y_dist / 10;
+	uint8_t tenth_mm = y_dist - mm * 10;
+	
+	
+	
+	uart_send_16bit(y_dist);
+	uart_send_16bit(y_dist);
+	uart_send_16bit(y_dist);
+	uart_send_16bit(y_dist);
+	uart_send_16bit(y_dist);
+	uart_send_16bit(y_dist);
+	uart_send_16bit(y_dist);
+	uart_send_16bit(y_dist);
+	
+	
+	
+	
+	if (y_dist > 5)
+	{
+		c->mode = MODE_SETUP_DRAWING_LEVEL;
+		uint16_t drive = y_dist - 5;
+		uint16_t oneshot_val = SMAC_calc_one_shot_timer_XY_max82(mm);
+	
+	
+		SMAC_start_one_shot_timer(oneshot_val);
+		SMAC_run_XY_pwm();
+		
+	}
+	
+// 	else if (mm == 0 && tenth_mm > 5)
+// 	{
+// 		c->mode = MODE_SETUP_DRAWING_LEVEL;
+// 		
+// 		uint16_t oneshot_val = SMAC_calc_one_shot_timer_XY_10th_mm_max820(tenth_mm);
+// 		SMAC_start_one_shot_timer(oneshot_val);
+// 		SMAC_run_XY_pwm();
+// 	}
+	
+	// Nah genug dran
+	else
+	{
+		c->mode = MODE_NORMAL;
+	}
+	
+	
+	
+	
+	
 }
 
 
@@ -607,6 +682,25 @@ void SMAC_start_new_motion_sequence(StepperMotionAxisController* c, MotionSequen
 			_trigger_motion_Y_sub_mm(c, seq);
 			break;
 			
+		case AXIS_MOVE_MEAS_RANGE:
+// 			BitSet(PORTA, Y_DIR);
+// 			BitClear(PORTA, X_DIR);
+			
+			// Wir sind im Meas_Range_Anfahrweg
+// 			c->stateflags = 23;
+			
+// 			_trigger_motion_Y(c, seq);
+			
+			
+			break;
+			
+		case AXIS_MOVE_DRAWING_LEVEL:
+			BitSet(PORTA, Y_DIR);
+			BitClear(PORTA, X_DIR);
+			
+			_trigger_motion_drawing_level(c, seq);
+	
+			break;
 
 		default:
 		break;

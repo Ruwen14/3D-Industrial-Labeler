@@ -15,6 +15,7 @@
 
 #include "constants.h"
 #include "movement.h"
+#include "ADCLaser.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -39,7 +40,10 @@ typedef enum
 	AXIS_MOVE_DOWN_ROTATE_ANTICLOCKWISE,
 	
 	AXIS_MOVE_UP_SUB_MM,
-	AXIS_MOVE_DOWN_SUB_MM
+	AXIS_MOVE_DOWN_SUB_MM,
+	
+	AXIS_MOVE_MEAS_RANGE,
+	AXIS_MOVE_DRAWING_LEVEL
 } AxisCmdFlag;
 
 
@@ -88,12 +92,18 @@ typedef enum
 	Z_ANTICLOCKWISE
 } ZDir;
 
-
+typedef enum
+{
+	MODE_NORMAL,
+	MODE_SETUP_MEAS,
+	MODE_SETUP_DRAWING_LEVEL
+} MotionMode;
 
 // StepperMotionAxisController - kurz SMAC
 typedef volatile struct
 {
 	uint8_t stateflags;
+	MotionMode mode;
 	FIFOSeqBuffer sequencebuffer;
 	// 	int16_t dist_traveled_Z;
 	// 	int16_t dist_traveled_Y;
@@ -167,6 +177,9 @@ void SMAC_ADD_MOVE_45DIAGONAL(StepperMotionAxisController* c, uint8_t zx_mm, ZDi
 
 void SMAC_ADD_MOVE_Y_sub_mm_max255(StepperMotionAxisController* c, uint8_t y_10th_mm , YDir dir);
 
+void SMAC_ADD_MOVE_MEAS_RANGE(StepperMotionAxisController* c);
+
+void SMAC_ADD_MOVE_Y_DRAWING_LEVEL(StepperMotionAxisController* c);
 
 void SMAC_start_new_motion_sequence(StepperMotionAxisController* c, MotionSequence* seq);
 

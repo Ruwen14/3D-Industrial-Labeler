@@ -79,6 +79,8 @@ void lcd_zahl (uint8_t zahl, char* text)
 }
 
 
+
+
 void lcd_text(char* ztext)
 {
 	uint8_t j = 0;						// Zählvariable initialisieren
