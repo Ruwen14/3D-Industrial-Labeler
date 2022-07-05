@@ -9,6 +9,8 @@
 
 void limit_swiches_init(void)
 {
+	_delay_ms(100);
+	
 	// PD2 als Eingang
 	BitClear(DDRD, X_LEFT_LIM_PIN);
 	// PD0 als Eingang
@@ -17,6 +19,7 @@ void limit_swiches_init(void)
 	BitClear(DDRD, Y_BOTTOM_LIM_PIN);
 	// PD1 als Eingang
 	BitClear(DDRD, Y_TOP_LIM_PIN);
+	
 	
 	// External Hardware Interrupts konfigurieren
 	// INT0-INT3 ausschalten solange wir es konfigurieren (Empfehlung Datenblatt)
@@ -42,6 +45,7 @@ void limit_swiches_init(void)
 	BitSet(EICRA, ISC10);
 	// -------------------------------------------------------------
 	
+	_delay_ms(100);
 	
 	// INT0-INT3 wieder anschalten
 	BitSet(EIMSK, INT2);
@@ -51,6 +55,9 @@ void limit_swiches_init(void)
 	
 	// Set-Enable-Bit. I-Bit im Statusregister setzten
 	sei();
-	
-	
+}
+
+void prevent_bounce(void)
+{
+	_delay_ms(1);
 }

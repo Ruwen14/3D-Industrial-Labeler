@@ -2,7 +2,7 @@
  * DrawingAlphabetLib.h
  *
  * Created: 17.06.2022 15:46:26
- *  Author: ruwen
+ *  Author: Michele
  */ 
 
 

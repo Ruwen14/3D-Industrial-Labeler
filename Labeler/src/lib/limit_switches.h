@@ -12,11 +12,12 @@
 #include "constants.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 
 
 void limit_swiches_init(void);
 
-
+void prevent_bounce(void);
 
 
 

@@ -3,7 +3,7 @@
  * uart.c
  *
  * Created: 03.06.2022 10:49:37
- *  Author: ruwen
+ *  Author: Oli & ruwen
  */ 
 
 
@@ -22,7 +22,6 @@ void uart_init(void)
 	
 	// 8 Datenbits, 1 Stoppbit
 	UCSR0C = (1<<UCSZ01) | (1<<UCSZ00);
-	
 }
 
 void uart_send(unsigned char data)
@@ -98,10 +97,6 @@ void uart_gets( char* Buffer, uint8_t MaxLen )
 	// C-String daraus zu machen
 	*Buffer = '\0';
 }
-
-
-
-
 
 
 

@@ -150,11 +150,11 @@
 // Laser-Distance-Sensor BEGIN
 // ***********************************************************************************************************************
 // Mean-Average 10 Bit-Werte wenn Laser in seinen Messschranken ankommt.
-#define LASER_DIGITAL_LOW 2
-#define LASER_DIGITAL_HIGH 1003
+#define LASER_DIGITAL_LOW 5
+#define LASER_DIGITAL_HIGH 1014
 
 #define LASER_MEAS_RANGE_LOW 0
-#define LASER_MEAS_RANGE_HIGH 503
+#define LASER_MEAS_RANGE_HIGH 800
 
 // Stepper muss in diesen Bereich Fahren, bevor er den Messungen des Lasers vertrauen kann
 // Derzeit 12.5% des Maximums

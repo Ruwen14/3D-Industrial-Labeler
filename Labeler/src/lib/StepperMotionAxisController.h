@@ -74,6 +74,9 @@ FIFOSeqBufferOptSuccess FIFOSeqBuffer_push(FIFOSeqBuffer* buf, MotionSequence se
 
 FIFOSeqBufferOptSuccess FIFOSeqBuffer_pop(FIFOSeqBuffer* buf, MotionSequence* seq);
 
+
+void FIFOSeqBuffer_delete(FIFOSeqBuffer* buf);
+
 typedef enum
 {
 	X_RIGHT,
@@ -96,7 +99,9 @@ typedef enum
 {
 	MODE_NORMAL,
 	MODE_SETUP_MEAS,
-	MODE_SETUP_DRAWING_LEVEL
+	MODE_SETUP_DRAWING_LEVEL,
+	MODE_IS_HOME,
+	MODE_IS_NOT_HOME
 } MotionMode;
 
 // StepperMotionAxisController - kurz SMAC

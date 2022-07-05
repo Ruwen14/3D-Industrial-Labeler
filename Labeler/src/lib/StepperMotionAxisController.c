@@ -41,6 +41,20 @@ FIFOSeqBufferOptSuccess FIFOSeqBuffer_pop(FIFOSeqBuffer* buf, MotionSequence* se
 	return BUFFER_HAS_CAPACITY;
 }
 
+void FIFOSeqBuffer_delete(FIFOSeqBuffer* buf)
+{
+	MotionSequence seq;
+	
+	while(FIFOSeqBuffer_pop(buf, &seq) == BUFFER_HAS_CAPACITY)
+	{
+		
+	}
+	
+	
+}
+
+
+
 void SMAC_init_XYZ(void)
 {
 	// ZXY-STEPPER-PORTS
@@ -505,62 +519,33 @@ static void _trigger_motion_diagonal(StepperMotionAxisController*c, MotionSequen
 
 static void _trigger_motion_drawing_level(StepperMotionAxisController*c, MotionSequence* seq)
 {
-	uint16_t laser_data = ADC_Laser_read();
-	uint16_t y_dist = laser_quantize_10th_mm(laser_data, 2, 1003, 0, 503);
+// 	_delay_ms(1000);	
+	uint16_t y_dist  = ADC_Laser_read_median();
 	
-	// Schlitten muss im Messbereich sein!
-// 	if (y_dist >= STEPPER_INSIDE_MEAS_RANGE)
-// 		return;	
+	
+	
 
-	// Extrahiere mm und 1/10 mm aus y_dist(dezimm). Speicher in uin8_t OK!, da y_dist den 16-Bit Werte-Bereich nicht ausnutzt.
+	
 	uint8_t mm = y_dist / 10;
 	uint8_t tenth_mm = y_dist - mm * 10;
 	
-	
-	
-	uart_send_16bit(y_dist);
-	uart_send_16bit(y_dist);
-	uart_send_16bit(y_dist);
-	uart_send_16bit(y_dist);
-	uart_send_16bit(y_dist);
-	uart_send_16bit(y_dist);
-	uart_send_16bit(y_dist);
-	uart_send_16bit(y_dist);
-	
-	
-	
-	
-	if (y_dist > 5)
+	uint16_t oneshot_val = 0;
+	if (mm != 0)
 	{
-		c->mode = MODE_SETUP_DRAWING_LEVEL;
-		uint16_t drive = y_dist - 5;
-		uint16_t oneshot_val = SMAC_calc_one_shot_timer_XY_max82(mm);
+		oneshot_val = oneshot_val + SMAC_calc_one_shot_timer_XY_max82(mm);
+	}
 	
 	
+	if (tenth_mm != 0)
+	{
+		oneshot_val = oneshot_val + SMAC_calc_one_shot_timer_XY_10th_mm_max820(tenth_mm);
+	}
+	
+	if (oneshot_val > 0)
+	{
 		SMAC_start_one_shot_timer(oneshot_val);
 		SMAC_run_XY_pwm();
-		
 	}
-	
-// 	else if (mm == 0 && tenth_mm > 5)
-// 	{
-// 		c->mode = MODE_SETUP_DRAWING_LEVEL;
-// 		
-// 		uint16_t oneshot_val = SMAC_calc_one_shot_timer_XY_10th_mm_max820(tenth_mm);
-// 		SMAC_start_one_shot_timer(oneshot_val);
-// 		SMAC_run_XY_pwm();
-// 	}
-	
-	// Nah genug dran
-	else
-	{
-		c->mode = MODE_NORMAL;
-	}
-	
-	
-	
-	
-	
 }
 
 

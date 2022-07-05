@@ -177,6 +177,9 @@
     <Compile Include="src\lib\limit_switches.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\lib\linefunctions.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\lib\movement.c">
       <SubType>compile</SubType>
     </Compile>
