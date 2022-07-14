@@ -8,6 +8,8 @@
 #include "StepperMotionAxisController.h"
 #include "uart.h"
 
+
+
 uint8_t FIFOSeqBuffer_empty(FIFOSeqBuffer* buf)
 {
 	if (buf->readIndex == buf->writeIndex)
@@ -52,7 +54,6 @@ void FIFOSeqBuffer_delete(FIFOSeqBuffer* buf)
 	
 	
 }
-
 
 
 void SMAC_init_XYZ(void)
@@ -238,14 +239,14 @@ void SMAC_disable_XY_pwm(void)
 	TCCR1A = 0;
 }
 
-uint16_t SMAC_calc_one_shot_timer_Z_max233(uint8_t move_mm)
+uint16_t SMAC_calc_one_shot_timer_Z_max233(uint8_t move_mm, uint8_t steps_per_mm_z)
 {
 	uint8_t pulse_period_ms = 2;
 
 	// Als uint32_t damit temporäres Ergebnis (T_interrupt_period * 15625) nicht überläuft
-	uint32_t T_interrupt_period = move_mm * STEPS_PER_MM_Z * pulse_period_ms;
+	uint32_t T_interrupt_period = move_mm * steps_per_mm_z * pulse_period_ms;
 
-	uint32_t OCRNA_ = (T_interrupt_period * 15625) - 1000;
+	uint32_t OCRNA_ = (T_interrupt_period * 15625) - 1000; // (16 MHz / N=1024) = 15625
 
 	uint16_t OCRNA_rescaled_SI = OCRNA_ / 1000;
 
@@ -292,7 +293,36 @@ uint16_t SMAC_calc_one_shot_timer_XY_10th_mm_max820(uint16_t move_10thmm)
 
 
 
+uint16_t SMAC_calc_one_shot_timer_Z_max233_degree(uint8_t degree)
+{
+// 		uint8_t pulse_period_ms = 2;
+// 
+// 		// Als uint32_t damit temporäres Ergebnis (T_interrupt_period * 15625) nicht überläuft
+// 		uint32_t T_interrupt_period = degree * STEPS_PER_DEGREE_Z * pulse_period_ms;
+// 
+// 		uint32_t OCRNA_ = (T_interrupt_period * 15625) - 1000;
+// 
+// 		uint16_t OCRNA_rescaled_SI = OCRNA_ / 1000;
+// 
+// 		return OCRNA_rescaled_SI;
+		
+		
+		uint8_t pulse_period_ms = 2;
 
+		uint32_t temp = degree * pulse_period_ms;
+		// Als uint32_t damit temporäres Ergebnis (T_interrupt_period * 15625) nicht überläuft
+		uint64_t T_interrupt_period = temp* 889;
+
+		uint64_t OCRNA_ = (T_interrupt_period * 15625) - 1000;
+		uint64_t divider = 100000;
+
+		uint16_t OCRNA_rescaled_SI = OCRNA_ / divider;
+
+		return OCRNA_rescaled_SI;
+		
+
+	
+}
 
 void SMAC_start_one_shot_timer(uint16_t ocrna_)
 {
@@ -378,7 +408,7 @@ void SMAC_END_DECLARE_MOTION_SEQUENCE(StepperMotionAxisController* c)
 	// Trigger First sequence
 	if (!(FIFOSeqBuffer_empty(&c->sequencebuffer)))
 	{
-		c->stateflags = 1;
+// 		c->stateflags = 1;
 		MotionSequence seq;
 		FIFOSeqBuffer_pop(&c->sequencebuffer, &seq);
 		SMAC_start_new_motion_sequence(c, &seq);
@@ -422,6 +452,19 @@ void SMAC_ADD_MOVE_Z_max233(StepperMotionAxisController* c, uint8_t move_mm, ZDi
 }	
 
 
+
+void SMAC_ADD_MOVE_Z_DEGREE_max233(StepperMotionAxisController* c, uint8_t degree, ZDir dir)
+{
+	
+	AxisCmdFlag newCmd;
+	if (dir == Z_CLOCKWISE)
+		newCmd = AXIS_ROTATE_CLOCKWISE_DEGREE;
+	else
+		newCmd = AXIS_ROTATE_ANTICLOCKWISE_DEGREE;
+	
+	MotionSequence seq = {0, degree, newCmd};
+	FIFOSeqBuffer_push(&c->sequencebuffer, seq);
+}
 
 void SMAC_ADD_MOVE_45DIAGONAL(StepperMotionAxisController* c, uint8_t zx_mm, ZDir zdir, XDir xdir)
 {
@@ -472,6 +515,30 @@ void SMAC_ADD_MOVE_Y_DRAWING_LEVEL(StepperMotionAxisController* c)
 	FIFOSeqBuffer_push(&c->sequencebuffer, seq);
 }
 
+void SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(StepperMotionAxisController* c)
+{
+	MotionSequence seq = {0,0, AXIS_MEAS_RADIUS_MEDIAN};
+	FIFOSeqBuffer_push(&c->sequencebuffer, seq);
+}
+
+void SMAC_ADD_MEAS_DIST_ROW_1(StepperMotionAxisController* c)
+{
+	MotionSequence seq = {0,0, AXIS_MEAS_DIST_ROW_1};
+	FIFOSeqBuffer_push(&c->sequencebuffer, seq);
+}
+
+void SMAC_ADD_MEAS_DIST_ROW_2(StepperMotionAxisController* c)
+{
+	MotionSequence seq = {0,0, AXIS_MEAS_DIST_ROW_2};
+	FIFOSeqBuffer_push(&c->sequencebuffer, seq);
+}
+
+void SMAC_ADD_FIND_BALLOON_SHELL_CENTER_STEP(StepperMotionAxisController* c)
+{
+	MotionSequence seq = {0,0, AXIS_MEAS_BALLOON_SHELL_CENTER};
+	FIFOSeqBuffer_push(&c->sequencebuffer, seq);
+}
+
 static void _trigger_motion_X(StepperMotionAxisController* c, MotionSequence* seq)
 {
 	uint16_t oneshot_val = SMAC_calc_one_shot_timer_XY_max82(seq->move_XY);
@@ -499,19 +566,28 @@ static void _trigger_motion_Y_sub_mm(StepperMotionAxisController* c, MotionSeque
 static void _trigger_motion_Z(StepperMotionAxisController* c, MotionSequence* seq)
 {
 
-	uint16_t oneshot_val = SMAC_calc_one_shot_timer_Z_max233(seq->move_Z);
+	uint16_t oneshot_val = SMAC_calc_one_shot_timer_Z_max233(seq->move_Z, c->steps_per_mm_z);
 	
 	SMAC_start_one_shot_timer(oneshot_val);
 	SMAC_run_Z_pwm();	
 	
 }
 
+static void _trigger_motion_Z_degree(StepperMotionAxisController*c , MotionSequence* seq)
+{
+	uint16_t oneshot_val = SMAC_calc_one_shot_timer_Z_max233_degree(seq->move_Z);
+	SMAC_start_one_shot_timer(oneshot_val);
+	SMAC_run_Z_pwm();
+}
+
+
+
 static void _trigger_motion_diagonal(StepperMotionAxisController*c, MotionSequence* seq)
 {
 	uint16_t oneshot_val = SMAC_calc_one_shot_timer_XY_max82(seq->move_XY);
 	
 	// Halbiere Frequenz sodass gleicher Weg in gleicher Zeit verfahren wird
-	OCR4A = 640;
+	OCR4A = c->temp_ocra_diagonal;
 	SMAC_start_one_shot_timer(oneshot_val);
 	SMAC_run_XY_pwm();
 	SMAC_run_Z_pwm();
@@ -538,7 +614,7 @@ static void _trigger_motion_drawing_level(StepperMotionAxisController*c, MotionS
 	
 	if (tenth_mm != 0)
 	{
-		oneshot_val = oneshot_val + SMAC_calc_one_shot_timer_XY_10th_mm_max820(tenth_mm);
+		oneshot_val = oneshot_val + SMAC_calc_one_shot_timer_XY_10th_mm_max820(tenth_mm+2);
 	}
 	
 	if (oneshot_val > 0)
@@ -548,11 +624,142 @@ static void _trigger_motion_drawing_level(StepperMotionAxisController*c, MotionS
 	}
 }
 
+static void _trigger_meas_radius_step(StepperMotionAxisController*c , MotionSequence* seq)
+{
+	static uint16_t laser_dist_buffer[MEDIAN_FILTER_SIZE];
+	static uint8_t index = 0;
+	
+	uint16_t laser_dist = ADC_Laser_read_median();
+	laser_dist_buffer[index] = laser_dist;
+	
+	index++;
+	
+	if (index == MEDIAN_FILTER_SIZE)
+	{
+		uint16_t median_dist = median_filter(laser_dist_buffer);
+		c->object_radius_mm  = calc_radius(median_dist);
+		//c->pixel_unit_mm = calc_pixel_unit_width_mm(c->object_radius_mm);
+		c->pixel_unit_mm = 3;
+		c->steps_per_mm_z = calc_steps_per_mm_Z(c->object_radius_mm);
+		
+		index = 0;
+	}
+	
+	// Fahre der MEDIAN_FILTER ist groß -> 15*24° = 360°
+	MotionSequence seq_temp = {0, 24, AXIS_ROTATE_CLOCKWISE_DEGREE};
+	_trigger_motion_Z_degree(c, &seq_temp);
+}
+
+static void _trigger_meas_dist_row_1_step(StepperMotionAxisController* c, MotionSequence* seq)
+{
+	// 20° Schritte 
+	static uint16_t laser_dist_buffer[18];
+	static uint8_t index = 0;
+	
+	uint16_t laser_dist = ADC_Laser_read_median();
+	laser_dist_buffer[index] = laser_dist;
+	
+	index++;
+	
+	if (index == 18)
+	{
+		uint16_t max = laser_dist_buffer[0];
+		for (uint8_t i = 0; i < 18; i++) 
+		{
+			if (laser_dist_buffer[i] > max)
+			{
+				max = laser_dist_buffer[i];
+			}
+		}
+		
+		c->dist_row_1 = max;
+		index = 0;	
+	}
+	
+	MotionSequence seq_temp = {0, 20, AXIS_ROTATE_CLOCKWISE_DEGREE};
+	_trigger_motion_Z_degree(c, &seq_temp);
+}
+
+
+
+static void _trigger_meas_dist_row_2_step(StepperMotionAxisController* c, MotionSequence* seq)
+{
+	// 20° Schritte
+	static uint16_t laser_dist_buffer_2[18];
+	static uint8_t index_2 = 0;
+	
+	uint16_t laser_dist = ADC_Laser_read_median();
+	laser_dist_buffer_2[index_2] = laser_dist;
+	
+	index_2++;
+	
+	if (index_2 == 18)
+	{
+		uint16_t max_2 = laser_dist_buffer_2[0];
+		for (uint8_t i = 0; i < 18; i++)
+		{
+			if (laser_dist_buffer_2[i] > max_2)
+			{
+				max_2 = laser_dist_buffer_2[i];
+			}
+		}
+		
+		c->dist_row_2 = max_2;
+		index_2 = 0;
+	}
+	
+	MotionSequence seq_temp = {0, 20, AXIS_ROTATE_CLOCKWISE_DEGREE};
+	_trigger_motion_Z_degree(c, &seq_temp);
+}
+
+
+
+static void _trigger_find_balloon_shell_center_step(StepperMotionAxisController* c , MotionSequence* seq)
+{
+	static uint16_t laser_distances[BALLOON_SHELL_CENTER_FIND_STEPS];
+	static uint8_t array_index = 0;
+	static uint8_t min_step_occurance = 0;
+	
+	uint16_t laser_dist = ADC_Laser_read_median();
+	laser_distances[array_index] = laser_dist;
+	array_index++;
+	
+	if (array_index == BALLOON_SHELL_CENTER_FIND_STEPS)
+	{
+		uint16_t min = laser_distances[0];
+		
+		for (uint8_t i = 0; i < BALLOON_SHELL_CENTER_FIND_STEPS; i++)
+		{
+			if (laser_distances[i] < min)
+			{
+				min = laser_distances[i];
+				min_step_occurance = i;
+			}
+			
+		}
+		c->balloon_shell_center_mm = min_step_occurance * 1;
+		array_index = 0;
+	}
+	
+	MotionSequence seq_temp = {1, 0, AXIS_MOVE_RIGHT};
+	SMAC_start_new_motion_sequence(c, &seq_temp);
+}
+
+
+
+
+
+
+
+
+
 
 void SMAC_start_new_motion_sequence(StepperMotionAxisController* c, MotionSequence* seq)
 {
+	c->state = STATE_PROCESSING;
 	// Wird wahrscheinlich zu einem Jump-Table optimiert.
 	// Performance entsprechend O(1) -> const.
+	// Der Übergang zweier Fahrtsequenzen ist NICHT spürbar	
 	switch (seq->cmd)
 	{
 		case AXIS_MOVE_LEFT:
@@ -593,6 +800,20 @@ void SMAC_start_new_motion_sequence(StepperMotionAxisController* c, MotionSequen
 			BitSet(PORTL, Z_DIR);
 			
 			_trigger_motion_Z(c, seq);
+			break;
+			
+			
+		case AXIS_ROTATE_CLOCKWISE_DEGREE:
+			BitClear(PORTL, Z_DIR);
+			
+			_trigger_motion_Z_degree(c, seq);
+			break;
+			
+		case AXIS_ROTATE_ANTICLOCKWISE_DEGREE:
+			BitSet(PORTL, Z_DIR);
+			
+			_trigger_motion_Z_degree(c, seq);
+			
 			break;
 
 		case AXIS_MOVE_RIGHT_ROTATE_CLOCKWISE:
@@ -686,9 +907,223 @@ void SMAC_start_new_motion_sequence(StepperMotionAxisController* c, MotionSequen
 			_trigger_motion_drawing_level(c, seq);
 	
 			break;
+			
+			
+		case AXIS_MEAS_RADIUS_MEDIAN:
+			_trigger_meas_radius_step(c, seq);
+		
+			break;	
+
+		case AXIS_MEAS_DIST_ROW_1:
+			_trigger_meas_dist_row_1_step(c, seq);
+			
+			break;
+			
+		case AXIS_MEAS_DIST_ROW_2:
+			_trigger_meas_dist_row_2_step(c, seq);
+			break;
+			
+		case AXIS_MEAS_BALLOON_SHELL_CENTER:
+			_trigger_find_balloon_shell_center_step(c, seq);
+			break;
+
 
 		default:
 		break;
 	}
 }
 
+
+
+void SMAC_return_home(StepperMotionAxisController* c)
+{
+	
+	
+	// Stop Current Driving
+	SMAC_disable_XY_pwm();
+	SMAC_disable_Z_pwm();
+	SMAC_disable_multi_one_shot_timer();
+	
+	// Empty Buffer
+	FIFOSeqBuffer_delete(&c->sequencebuffer);
+	c->state = STATE_PROCESSING;
+	
+	// Zugegebenermaßen ist das benutzen einer While-Schleife nicht perfekt und
+	// widerspricht dem Design-Ansatz des Totzeitfreien Fahrens über Buffer des restlichen Codes
+	// Diese Whileschleife positioniert den Motor allerdings nur um wenige Zehntel-mm vom Endlagenschalter weg und wird
+	// nur einmalig am Start des Programmes ausgeführt. Die dadurch eingeführte Totzeit von wenigen millisekunden ist für uns somit vertretbar und
+	// vereinfacht die Initiale-Positioniertung des Motors ERHEBLICH!
+	while(!IsBitSet(PIND, X_LEFT_LIM_PIN))
+	{
+		BitSet(PORTA, Y_DIR);
+		BitSet(PORTA, X_DIR);
+		XY_RISING_EDGE;
+		_delay_us(1000);
+		XY_FALLING_EDGE;
+		_delay_us(1000);
+		
+	}
+	
+	
+	while(!IsBitSet(PIND, Y_BOTTOM_LIM_PIN))
+	{
+		BitSet(PORTA, Y_DIR);
+		BitClear(PORTA, X_DIR);
+		XY_RISING_EDGE;
+		_delay_us(1000);
+		XY_FALLING_EDGE;
+		_delay_us(1000);
+	}
+	
+	
+	// Fahr in Home-Position
+	BitClear(PORTA, Y_DIR);
+	BitSet(PORTA, X_DIR);
+	SMAC_run_XY_pwm();
+	
+}
+
+
+void SMAC_ADD_MOVE_RADIUS_MEAS_RANGE(StepperMotionAxisController* c, uint8_t x_offset)
+{
+	SMAC_ADD_MOVE_X_max82(c, x_offset, X_RIGHT);
+	
+	// Gehe 190,7mm hoch. Hierfür ist der Laser optimal kalibriert
+	SMAC_ADD_MOVE_Y_max82(c, 80, Y_UP);
+	SMAC_ADD_MOVE_Y_max82(c, 80, Y_UP);
+	SMAC_ADD_MOVE_Y_max82(c, 30, Y_UP);
+	SMAC_ADD_MOVE_Y_sub_mm_max255(c, 7, Y_UP);
+}
+
+void SMAC_ADD_GO_MEASUREMENT_RANGE(StepperMotionAxisController*c)
+{
+		if (c->objtype == OBJECT_BALLOON)
+		{
+			SMAC_ADD_MOVE_X_max82(c, 77, X_RIGHT);
+		}
+		else
+		{
+			SMAC_ADD_MOVE_X_max82(c, 80, X_RIGHT);
+			SMAC_ADD_MOVE_X_max82(c, 80, X_RIGHT);
+		}
+	
+	
+		// Gehe 190,7mm hoch. Hierfür ist der Laser optimal kalibriert
+		SMAC_ADD_MOVE_Y_max82(c, 80, Y_UP);
+		SMAC_ADD_MOVE_Y_max82(c, 80, Y_UP);
+		SMAC_ADD_MOVE_Y_max82(c, 30, Y_UP);
+		SMAC_ADD_MOVE_Y_sub_mm_max255(c, 7, Y_UP);
+}
+
+void SMAC_GO_AND_MEASURE_RADIUS(StepperMotionAxisController* c)
+{
+	SMAC_BEGIN_DECLARE_MOTION_SEQUENCE(c);
+	
+	// X-offset
+	SMAC_ADD_MOVE_X_max82(c, 80, X_RIGHT);
+	SMAC_ADD_MOVE_X_max82(c, 55, X_RIGHT);
+
+	// 190,7 mm von HOME ausgehend
+	SMAC_ADD_MOVE_Y_max82(c, 80, Y_UP);
+	SMAC_ADD_MOVE_Y_max82(c, 80, Y_UP);
+	SMAC_ADD_MOVE_Y_max82(c, 30, Y_UP);
+	SMAC_ADD_MOVE_Y_sub_mm_max255(c, 7, Y_UP);
+	
+	// Alle 24° eine Abstandsmessung die gemittelt(median) wird
+	// und in controller.object_radius_mm gespeichert wird
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(c);
+	
+	SMAC_END_DECLARE_MOTION_SEQUENCE(c);
+}
+
+
+
+void SMAC_ADD_MOVE_X_BIG(StepperMotionAxisController* c, uint8_t move_mm, XDir dir)
+{
+	while(move_mm != 0)
+	{
+		if (move_mm >= 80)
+		{
+			
+			SMAC_ADD_MOVE_X_max82(c, 80, dir);
+			move_mm -= 80;
+		}
+		else
+		{
+			SMAC_ADD_MOVE_X_max82(c, move_mm, dir);
+			move_mm -= move_mm;
+		}
+	}
+	
+}
+
+
+
+void SMAC_ADD_MOVE_Y_FLOAT_MM(StepperMotionAxisController*c, uint16_t move, YDir dir)
+{
+	uint8_t mm = move / 10;
+	uint8_t tenth_mm = move - mm * 10;
+	
+	if (mm != 0)
+	{
+		SMAC_ADD_MOVE_Y_max82(c, mm, dir);
+	}
+	
+	if (tenth_mm != 0)
+	{
+		SMAC_ADD_MOVE_Y_sub_mm_max255(c, tenth_mm, dir);
+	}
+}
+
+
+uint8_t calc_steps_per_mm_Z(uint16_t radius_mm)
+{
+	
+	uint16_t presc = Z_STEPS_PER_MM_PRESCALER;
+	uint32_t scaled_radius = 10000 / radius_mm;
+	uint32_t temp = (uint32_t)(presc * scaled_radius);
+	uint16_t downscaled = (uint16_t)(temp / 1000);
+	uint8_t res = (downscaled + 5) / 10; // round
+	return res;
+}
+
+
+uint16_t calc_temp_freq_Z_for_diagonal_move(uint8_t steps_per_mm_Z)
+{
+	uint16_t freq = (uint32_t)((uint32_t)(FREQ_STEPPER_X * STEPS_PER_MM_X) * 10)  / steps_per_mm_Z;
+	return (freq + 5) / 10;
+}
+
+
+uint8_t calc_pixel_unit_width_mm(uint8_t radius_obj_mm)
+{
+	uint16_t upscaled_res= PIXEL_CALC_PRESC_UPSCALED_1000 * radius_obj_mm;
+	// Always round down
+	uint8_t res_floored = upscaled_res / 1000;
+	return res_floored;
+}
+
+void SMAC_init(StepperMotionAxisController*c, uint8_t object_radius_z_mm_, ObjectType type)
+{
+	c->object_radius_mm = object_radius_z_mm_;
+	c->pixel_unit_mm = calc_pixel_unit_width_mm(object_radius_z_mm_)-1;
+	c->steps_per_mm_z = calc_steps_per_mm_Z(object_radius_z_mm_);
+	c->state = STATE_IDLE;
+	c->objtype = type;
+	SMAC_init_XYZ();
+	
+}

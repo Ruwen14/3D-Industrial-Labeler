@@ -32,7 +32,7 @@ uint16_t ADC_Laser_read_median(void);
 
 uint16_t median_filter(uint16_t* value_buf);
 
-
+uint8_t calc_radius(uint16_t laser_dist);
 
 
 #endif /* ADCLASER_H_ */

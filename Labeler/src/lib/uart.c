@@ -56,6 +56,56 @@ unsigned char uart_rec(void)
 }
 
 
+void UserInputHandler_poll_input(UserInputHandler* handler)
+{
+
+	if (handler->status == INPUT_INCOMPLETED && handler->bufidx < 32)
+	{
+		if (UCSR0A & (1 << RXC0))
+		{
+			char c = UDR0;
+			
+			// HTerm lässt uns kein \n als Ascii senden. Deswegen muss '#' ausreichen.
+			// Füllen die restliche Zeile mit Leerzeichen auf, damit das LCD es easy anzeigen kann
+			if (c == '#' && handler->bufidx <= 15)
+			{
+				handler->second_row_at = handler->bufidx;
+				uint8_t fill = 16-handler->bufidx;
+				for (uint8_t i = 0; i < fill; i++)
+				{
+					handler->input_buffer[handler->bufidx+i] = ' ';
+				}
+				handler->bufidx += fill;
+			}
+			else
+			{
+				handler->input_buffer[handler->bufidx] = c;
+				++handler->bufidx;
+			}
+			
+			
+			if (c == '\0')
+			{
+				handler->status = INPUT_COMPLETED;
+			}
+			
+			else if (handler->bufidx == 32)
+			{
+				handler->input_buffer[handler->bufidx] = '\0';
+				handler->status = INPUT_COMPLETED;
+			}
+		}
+	}
+}
+
+void UserInputHandler_reset_input(UserInputHandler* handler)
+{
+	handler->bufidx = 0;
+	handler->second_row_at = 17;
+	handler->status = INPUT_INCOMPLETED;
+}
+
+
 //______________________________________
 // Zum Testen
 

@@ -25,53 +25,27 @@ void uart_send_16bit(uint16_t data);
 unsigned char uart_rec(void);
 
 
-// 
-// typedef enum
-// {
-// 	INPUT_INCOMPLETED,
-// 	INPUT_COMPLETED
-// } UserInputHandler_Status;
-// 
-// typedef struct
-// {
-// 	uint8_t bufidx;
-// 	UserInputHandler_Status status;
-// 	char input_buffer[33];
-// } UserInputHandler;
-// 
-// void UserInputHandler_poll_input(UserInputHandler* handler)
-// {
-// 
-// 	if (handler->status == INPUT_INCOMPLETED && handler->bufidx < 32)
-// 	{
-// 		if (UCSR0A & (1 << RXC0))
-// 		{
-// 			char c = UDR0;
-// 			handler->input_buffer[handler->bufidx] = c;
-// 			++handler->bufidx;
-// 			
-// 			if (c == '\0')
-// 			{
-// 				handler->status = INPUT_COMPLETED;
-// 			}
-// 
-// 			else if (handler->bufidx == 32)
-// 			{
-// 				handler->input_buffer[handler->bufidx] = '\0';
-// 				handler->status = INPUT_COMPLETED;
-// 			}
-// 		}
-// 	}
-// }
-// 
-// void UserInputHandler_reset_input(UserInputHandler* handler)
-// {
-// 	handler->bufidx = 0;
-// 	handler->status = INPUT_INCOMPLETED;
-// }
-// 
 
 
+
+typedef enum
+{
+	INPUT_INCOMPLETED,
+	INPUT_COMPLETED
+} UserInputHandler_Status;
+
+typedef struct
+{
+	uint8_t bufidx;
+	uint8_t second_row_at;
+	UserInputHandler_Status status;
+	char input_buffer[33];
+} UserInputHandler;
+
+
+void UserInputHandler_poll_input(UserInputHandler* handler);
+
+void UserInputHandler_reset_input(UserInputHandler* handler);
 
 
 #endif /* UART_H_ */

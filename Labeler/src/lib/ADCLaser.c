@@ -48,7 +48,7 @@ void ADC_Laser_init(void)
 uint16_t ADC_Laser_read(void)
 {
 	// Wandlung starten
-	ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(1<<ADSC);
+	ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0)|(1<<ADSC); // ToDo 
 	
 // 	Warte bis fertig
 	while(ADCSRA & (1<<ADSC));
@@ -81,6 +81,9 @@ uint16_t laser_quantize_10th_mm(uint16_t laser_pos, uint8_t low_laser, uint16_t 
 	uint16_t temp2 = (high_laser - low_laser) + quant_low;
 	return temp / temp2;
 }
+
+
+
 
 uint16_t ADC_Laser_read_mean(void)
 {
@@ -131,4 +134,13 @@ uint16_t median_filter(uint16_t* value_buf)
 		}
 	}
 	return value_buf[(MEDIAN_FILTER_SIZE - 1) >> 1];
+}
+
+uint8_t calc_radius(uint16_t laser_dist)
+{
+	int16_t delta = (int16_t)(REFERENCE_DIST - laser_dist);
+	uint16_t radius = (uint16_t)(REFERENCE_RAD + delta);
+	
+	uint8_t rad = (radius + 5) / 10;
+	return rad;
 }

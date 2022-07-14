@@ -106,3 +106,11 @@ void lcd_text(char* ztext)
 	}
 	return;
 }
+
+void lcd_reset(void)
+{
+	lcd_cmd(0x01); // Clear Display
+	lcd_cmd(0x03); // Return Home
+}
+
+

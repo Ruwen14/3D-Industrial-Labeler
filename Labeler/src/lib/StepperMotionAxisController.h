@@ -19,6 +19,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+
+
 typedef enum
 {
 	AXIS_MOVE_LEFT,
@@ -28,6 +30,10 @@ typedef enum
 
 	AXIS_ROTATE_CLOCKWISE,
 	AXIS_ROTATE_ANTICLOCKWISE,
+	
+	AXIS_ROTATE_CLOCKWISE_DEGREE,
+	AXIS_ROTATE_ANTICLOCKWISE_DEGREE,
+	
 
 	AXIS_MOVE_RIGHT_ROTATE_CLOCKWISE,
 	AXIS_MOVE_LEFT_ROTATE_CLOCKWISE,
@@ -43,8 +49,15 @@ typedef enum
 	AXIS_MOVE_DOWN_SUB_MM,
 	
 	AXIS_MOVE_MEAS_RANGE,
-	AXIS_MOVE_DRAWING_LEVEL
+	AXIS_MOVE_DRAWING_LEVEL,
+	
+	AXIS_MEAS_RADIUS_MEDIAN,
+	AXIS_MEAS_DIST_ROW_1,
+	AXIS_MEAS_DIST_ROW_2,
+	AXIS_MEAS_BALLOON_SHELL_CENTER,
+	
 } AxisCmdFlag;
+
 
 
 
@@ -97,18 +110,38 @@ typedef enum
 
 typedef enum
 {
-	MODE_NORMAL,
-	MODE_SETUP_MEAS,
-	MODE_SETUP_DRAWING_LEVEL,
-	MODE_IS_HOME,
-	MODE_IS_NOT_HOME
-} MotionMode;
+	STATE_IDLE,
+	STATE_PROCESSING,
+	
+} ControllerState;
+
+
+
+typedef enum
+{
+	OBJECT_CYLINDER,
+	OBJECT_BALLOON
+	
+} ObjectType;
+
+
+
+
 
 // StepperMotionAxisController - kurz SMAC
 typedef volatile struct
 {
 	uint8_t stateflags;
-	MotionMode mode;
+	uint8_t pixel_unit_mm;
+	uint8_t pixel_unit_mm_y;
+	uint8_t object_radius_mm;
+	uint8_t steps_per_mm_z;
+	uint16_t dist_row_1;
+	uint16_t dist_row_2;
+	uint16_t balloon_shell_center_mm;
+	uint16_t temp_ocra_diagonal;
+	ControllerState state;
+	ObjectType objtype;
 	FIFOSeqBuffer sequencebuffer;
 	// 	int16_t dist_traveled_Z;
 	// 	int16_t dist_traveled_Y;
@@ -133,7 +166,7 @@ void SMAC_disable_XY_pwm(void);
 // Berechnet den Output-Compare-Value für einen One-Shot-Interrupt mit einer Auflösung von 1 ms,
 // der die Stepper-PWM nach verfahrenen Weg stoppt. Maximalwert von 233 [mm] darf nicht überschritten werden,
 // da sonst der Output-Compare-Value (16 bit) überläuft.
-uint16_t SMAC_calc_one_shot_timer_Z_max233(uint8_t move_mm);
+uint16_t SMAC_calc_one_shot_timer_Z_max233(uint8_t move_mm, uint8_t steps_per_mm_z);
 
 // INTERNAL-USAGE
 // Berechnet den Output-Compare-Value für einen One-Shot-Interrupt mit einer Auflösung von 1 ms,
@@ -145,6 +178,8 @@ uint16_t SMAC_calc_one_shot_timer_XY_max82(uint8_t move_mm);
 
 uint16_t SMAC_calc_one_shot_timer_XY_10th_mm_max820(uint16_t move_10thmm);
 
+
+uint16_t SMAC_calc_one_shot_timer_Z_max233_degree(uint8_t degree);
 
 
 
@@ -174,9 +209,16 @@ void SMAC_END_DECLARE_MOTION_SEQUENCE(StepperMotionAxisController* c);
 
 void SMAC_ADD_MOVE_X_max82(StepperMotionAxisController* c, uint8_t move_mm, XDir dir);
 
+
+
+
+
+
 void SMAC_ADD_MOVE_Y_max82(StepperMotionAxisController* c, uint8_t move_mm, YDir dir);
 
 void SMAC_ADD_MOVE_Z_max233(StepperMotionAxisController* c, uint8_t move_mm, ZDir dir);
+
+void SMAC_ADD_MOVE_Z_DEGREE_max233(StepperMotionAxisController* c, uint8_t degree, ZDir dir);
 
 void SMAC_ADD_MOVE_45DIAGONAL(StepperMotionAxisController* c, uint8_t zx_mm, ZDir zdir, XDir xdir);
 
@@ -186,7 +228,40 @@ void SMAC_ADD_MOVE_MEAS_RANGE(StepperMotionAxisController* c);
 
 void SMAC_ADD_MOVE_Y_DRAWING_LEVEL(StepperMotionAxisController* c);
 
+void SMAC_ADD_MEAS_RADIUS_MEDIAN_STEP(StepperMotionAxisController* c);
+
+void SMAC_ADD_MEAS_DIST_ROW_1(StepperMotionAxisController* c);
+
+void SMAC_ADD_MEAS_DIST_ROW_2(StepperMotionAxisController* c);
+
+void SMAC_ADD_FIND_BALLOON_SHELL_CENTER_STEP(StepperMotionAxisController* c);
+
 void SMAC_start_new_motion_sequence(StepperMotionAxisController* c, MotionSequence* seq);
+
+void SMAC_return_home(StepperMotionAxisController* c);
+
+void SMAC_ADD_MOVE_RADIUS_MEAS_RANGE(StepperMotionAxisController* c, uint8_t x_offset);
+
+void SMAC_ADD_GO_MEASUREMENT_RANGE(StepperMotionAxisController*c);
+
+void SMAC_GO_AND_MEASURE_RADIUS(StepperMotionAxisController* c);
+
+void SMAC_ADD_MOVE_X_BIG(StepperMotionAxisController* c, uint8_t move_mm, XDir dir);
+
+void SMAC_ADD_MOVE_Y_FLOAT_MM(StepperMotionAxisController*c, uint16_t move, YDir dir);
+
+
+
+
+
+uint8_t calc_steps_per_mm_Z(uint16_t radius_mm);
+
+
+uint16_t calc_temp_freq_Z_for_diagonal_move(uint8_t steps_per_mm_Z);
+
+uint8_t calc_pixel_unit_width_mm(uint8_t radius_obj_mm);
+
+void SMAC_init(StepperMotionAxisController*c, uint8_t object_radius_z_mm_, ObjectType type);
 
 
 

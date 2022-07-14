@@ -26,5 +26,6 @@ void lcd_zahl (uint8_t zahl, char* text);
 // Befehl zur Ausgabe von Text auf dem Display
 void lcd_text(char* ztext);
 
+void lcd_reset(void);
 
 #endif /* LCD_H_ */

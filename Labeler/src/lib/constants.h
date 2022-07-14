@@ -43,6 +43,11 @@
 
 // Berechnet für Aufsteckzylinder (radius=5.5cm) -> Genauer Wert 9.26
 #define STEPS_PER_MM_Z 9
+#define STEPS_PER_DEGREE_Z 9 // 1 / (1.8°/16)
+#define Z_STEPS_PER_MM_PRESCALER 509 //  1 / (((1.8°)/16) / 360 * 2 * pi)
+#define PIXEL_CALC_PRESC_UPSCALED_1000 77 // (2 * pi / (16x4px + 15x1px + 1x2px)) * 1000
+
+
 
 // ***********************************************************************************************************************
 // Z-Schrittmotor END
@@ -62,6 +67,7 @@
 
 // Kalibriert manuell
 #define STEPS_PER_MM_X 23
+#define FREQ_STEPPER_X 249
 
 // ***********************************************************************************************************************
 // X-Schrittmotor END
@@ -80,7 +86,7 @@
 #define Y_ACTIVE PA0
 
 // Kalibriert manuell
-#define STEPS_PER_MM_Y 25
+#define STEPS_PER_MM_Y 23
 // ***********************************************************************************************************************
 // Y-Schrittmotor END
 // ***********************************************************************************************************************
@@ -115,7 +121,7 @@
 
 
 // #define BAUD_RATE 115200UL
-#define BAUD_RATE 9600UL
+#define BAUD_RATE 9600UL // Nutzen eine niedrigere Baudrate, damit das Programm ausreichend Zeit hat HTerm-Strings zu lesen.
 
 #define BAUD_UBRR ((F_CPU+BAUD_RATE*8UL)/(16UL*BAUD_RATE)-1)
 
@@ -160,16 +166,33 @@
 // Derzeit 12.5% des Maximums
 #define STEPPER_INSIDE_MEAS_RANGE (LASER_MEAS_RANGE_HIGH - (LASER_MEAS_RANGE_HIGH >> 3))
 
+#define REFERENCE_DIST 600
+#define REFERENCE_RAD 550
 
 
+#define OFFSET_PEN_LASER 46
+
+#define BALLOON_SHELL_CENTER_FIND_STEPS 150
+
+// ***********************************************************************************************************************
+// Laser-Distance-Sensor END
+// ***********************************************************************************************************************
 
 
+// -----------------------------------------------------------------------------------------------------------------------
 
+
+// ***********************************************************************************************************************
+// Controll-Buttons BEGIN
+// ***********************************************************************************************************************
+
+#define VERIFY_BUTTON_PIN PG1 // Grüner Knopf 
+#define CANCEL_BUTTON_PIN PL7 // Roter Knopf
 
 
 
 // ***********************************************************************************************************************
-// Laser-Distance-Sensor BEGIN
+// Controll-Buttons END
 // ***********************************************************************************************************************
 
 
