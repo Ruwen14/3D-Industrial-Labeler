@@ -33,6 +33,6 @@ https://user-images.githubusercontent.com/73891246/181120623-6bf3515d-1356-47cf-
 https://user-images.githubusercontent.com/73891246/181123056-ca3c7127-452e-408b-b053-fc9ea4a5580d.mp4
 
 
-
-
+# Real-Time-RS232-Plotting-Interface
+![real_time_plotting](https://user-images.githubusercontent.com/73891246/181124626-bf0ac794-83d3-479c-b444-bb8e26e011e6.gif)
 
