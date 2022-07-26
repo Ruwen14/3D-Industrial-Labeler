@@ -57,6 +57,7 @@ uint16_t ADC_Laser_read(void)
 	return ADC;
 }
 
+// ADC-Wert in mm umrechnen
 uint8_t laser_quantize(uint16_t laser_pos, uint8_t low_laser, uint16_t high_laser, uint8_t quant_low, uint8_t quant_high)
 {
 	uint16_t temp = (laser_pos - low_laser) * (quant_high - quant_low);
@@ -64,7 +65,7 @@ uint8_t laser_quantize(uint16_t laser_pos, uint8_t low_laser, uint16_t high_lase
 	return temp / temp2;
 }
 
-
+// ADC-Wert in mm umrechnen. Skaliert für 1/10 mm Genaugigkeit
 uint16_t laser_quantize_10th_mm(uint16_t laser_pos, uint8_t low_laser, uint16_t high_laser, uint8_t quant_low, uint16_t quant_high)
 {
 	 if (laser_pos < low_laser)
@@ -82,9 +83,7 @@ uint16_t laser_quantize_10th_mm(uint16_t laser_pos, uint8_t low_laser, uint16_t 
 	return temp / temp2;
 }
 
-
-
-
+// Gemittelter Laser-Mess-Wert über 16 Messungen
 uint16_t ADC_Laser_read_mean(void)
 {
 	uint16_t sum = 0;
@@ -98,6 +97,7 @@ uint16_t ADC_Laser_read_mean(void)
 	return ((sum + 8) >> 4);
 }
 
+// Median Laser-Messwert über MEDIAN_FILTER_SIZE Messungen
 uint16_t ADC_Laser_read_median(void)
 {
 	
@@ -115,7 +115,7 @@ uint16_t ADC_Laser_read_median(void)
 
 
 
-
+// Simpler Median-Filter nach dem Prinzip: Sortiere und nimm Mitte.
 uint16_t median_filter(uint16_t* value_buf)
 {
 	uint8_t i;
@@ -136,6 +136,7 @@ uint16_t median_filter(uint16_t* value_buf)
 	return value_buf[(MEDIAN_FILTER_SIZE - 1) >> 1];
 }
 
+// Berechne Radius, aus Laser-Messwert ausgehend von Messposition
 uint8_t calc_radius(uint16_t laser_dist)
 {
 	int16_t delta = (int16_t)(REFERENCE_DIST - laser_dist);

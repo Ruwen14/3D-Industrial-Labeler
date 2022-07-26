@@ -208,18 +208,29 @@ void writeLetterI(StepperMotionAxisController* controller)
 {
 	//Zustellung Startpunkt Buchstabe I
 		
+	horizontal_right(1);	
+		
 	//Zustellung in y - Papierkontakt
 	pen_contact_y(1);
+	
+	horizontal_right(2);
+	
+	horizontal_left(1);	
 		
 	//Zeichensequenz in Pixeln
 	vertical_up(8);
+	
+	horizontal_left(1);
+	
+	horizontal_right(2);
+	
 
 	//Absetzen in y
 	pen_drop_y(1);
 		
 	//Fahrt zum Referenzpunkt
-	horizontal_right(1);
 	vertical_down(8);
+	horizontal_right(2);
 }
 
 void writeLetterJ(StepperMotionAxisController* controller)
@@ -1149,8 +1160,8 @@ uint8_t validate_input_stream(char* stream)
 	return 1;
 }
 
-void SMAC_go_beginning_row2(StepperMotionAxisController* controller, uint8_t char_count)
-	{
+void SMAC_GO_BEGINNING_CYLINDER_ROW_2(StepperMotionAxisController* controller, uint8_t char_count)
+{
 	uint16_t left_to_drive = (char_count*5)*controller->pixel_unit_mm;
 	
 	while(left_to_drive!=0)
@@ -1167,7 +1178,7 @@ void SMAC_go_beginning_row2(StepperMotionAxisController* controller, uint8_t cha
 		}
 		
 	}
-	SMAC_ADD_MOVE_X_max82(controller, 9*controller->pixel_unit_mm, X_RIGHT);
+	SMAC_ADD_MOVE_X_max82(controller, 10*controller->pixel_unit_mm, X_RIGHT);
 	
 	
 // 	for (uint8_t i = 0; i < temp/40; i++)
@@ -1374,8 +1385,9 @@ void SMAC_dispatch_character_function(StepperMotionAxisController* controller, c
 		break;
 			
 		default:
+		// Kann nie Eintreten, weil wir zuvor UART-Nutzereingabe validiert haben.
 		break;
-		//gibt Fehlermeldung aus? Z.B. ö, ä, ....
+		
 	}
 		
 }

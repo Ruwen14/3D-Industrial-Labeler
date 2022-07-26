@@ -2,7 +2,7 @@
  * limit_switches.h
  *
  * Created: 25.05.2022 16:56:58
- *  Author: ruwen
+ *  Author: ruwen & Oli
  */ 
 
 

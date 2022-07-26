@@ -24,10 +24,13 @@
 
 #define IsBitSet(Port, Bit) (Port & (1 << Bit))
 
+#define PI_SCALED 314
+#define TWO_PI_SCALED 628
+#define THREE_SIXTY_DIV_TWO_PI 57 // 360 / (2*pi)
+
 // ***********************************************************************************************************************
 // QUALITY OF LIFE MACROS END
 // ***********************************************************************************************************************
-
 
 // -----------------------------------------------------------------------------------------------------------------------
 
@@ -125,6 +128,10 @@
 
 #define BAUD_UBRR ((F_CPU+BAUD_RATE*8UL)/(16UL*BAUD_RATE)-1)
 
+#define DISABLE_UART_ISR TIMSK0 &= ~(1 << OCIE0A)
+#define ENABLE_UART_ISR TIMSK0 |= (1<<OCIE0A)
+
+
 // ***********************************************************************************************************************
 // CLOCK AND SYNCHRONISATION END
 // ***********************************************************************************************************************
@@ -174,6 +181,24 @@
 
 #define BALLOON_SHELL_CENTER_FIND_STEPS 150
 
+
+
+
+#define NON_OBJECT_ERROR_DISTANCE 0
+#define WRONG_OBJECT_BALLLOON_DIST 123
+#define WRONG_OBJECT_CYLINDER_DIST 123
+
+
+
+
+#define BALLOON_OBJECT_CHECK_INDEX_LOWER 10
+#define BALLOON_OBJECT_CHECK_INDEX_UPPER 50
+#define BALLOON_OBJECT_CHECK_DELTA 30
+#define CYLINDER_OBJECT_CHECK_DELTA  30
+
+
+
+
 // ***********************************************************************************************************************
 // Laser-Distance-Sensor END
 // ***********************************************************************************************************************
@@ -194,7 +219,8 @@
 // ***********************************************************************************************************************
 // Controll-Buttons END
 // ***********************************************************************************************************************
-
+#define _SR_SETUP controller.pixel_unit_mm = 3;
+#define _DR_SETUP controller.pixel_unit_mm = 2;
 
 
 #endif /* CONSTANTS_H_ */

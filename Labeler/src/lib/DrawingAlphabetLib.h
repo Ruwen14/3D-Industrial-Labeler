@@ -48,11 +48,11 @@ SMAC_ADD_MOVE_45DIAGONAL(controller, pixel*controller->pixel_unit_mm, Z_CLOCKWIS
 
 
 #define pen_contact_y(pixel) \
-SMAC_ADD_MOVE_Y_max82(controller, pixel*controller->pixel_unit_mm_y, Y_UP); \
+SMAC_ADD_MOVE_Y_max82(controller, pixel*controller->pixel_unit_mm_y_up, Y_UP); \
 
 
 #define pen_drop_y(pixel) \
-SMAC_ADD_MOVE_Y_max82(controller, pixel*controller->pixel_unit_mm_y, Y_DOWN); \
+SMAC_ADD_MOVE_Y_max82(controller, pixel*controller->pixel_unit_mm_y_down, Y_DOWN); \
 
 
 
@@ -135,7 +135,7 @@ uint8_t validate_input(char character);
 
 uint8_t validate_input_stream(char* stream);
 
-void SMAC_go_beginning_row2(StepperMotionAxisController* controller, uint8_t char_count);
+void SMAC_GO_BEGINNING_CYLINDER_ROW_2(StepperMotionAxisController* controller, uint8_t char_count);
 
 
 void SMAC_dispatch_character_function(StepperMotionAxisController* controller, char character);

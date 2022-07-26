@@ -2,7 +2,7 @@
  * uart.h
  *
  * Created: 24.05.2022 10:49:28
- *  Author: Oli & ruwen
+ *  Author: Oli 
  */ 
 
 
@@ -10,22 +10,20 @@
 #define UART_H_
 
 #include "constants.h"
+#include <avr/interrupt.h>
 
-// see https://github.com/arduino/ArduinoCore-avr/blob/24e6edd475c287cdafee0a4db2eb98927ce3cf58/cores/arduino/HardwareSerial.cpp HardwareSerial::begin()
 
 
 // Es funktioniert nur mit UART0 (von 4) keine Ahnung warum
 void uart_init(void);
 
-// ToDo: Overflow check
 void uart_send(unsigned char data);
 
 void uart_send_16bit(uint16_t data);
 
 unsigned char uart_rec(void);
 
-
-
+void uart_interrupt_init(void);
 
 
 typedef enum
@@ -34,6 +32,7 @@ typedef enum
 	INPUT_COMPLETED
 } UserInputHandler_Status;
 
+// Greift sich iterativ Buchstaben aus dem Sendebuffer, bis die Eingabe komplett ist
 typedef struct
 {
 	uint8_t bufidx;
@@ -47,5 +46,17 @@ void UserInputHandler_poll_input(UserInputHandler* handler);
 
 void UserInputHandler_reset_input(UserInputHandler* handler);
 
+
+#define RESET_INPUT_BUF \
+for (uint8_t i = 0; i < 33; i++) \
+{ \
+	input_handler.input_buffer[i] = 0; \
+} \
+
+#define EMPTY_UART \
+while (UCSR0A & (1 << RXC0)) \
+{ \
+	char c = UDR0; \
+} \
 
 #endif /* UART_H_ */

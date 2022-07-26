@@ -3,7 +3,7 @@
  * uart.c
  *
  * Created: 03.06.2022 10:49:37
- *  Author: Oli & ruwen
+ *  Author: Oli 
  */ 
 
 
@@ -39,14 +39,7 @@ void uart_send_16bit(uint16_t data)
 	uart_send((data >> 8) & 0xff);
 }
 
-void uart_send_32bit(uint32_t data)
-{
-	// Obere beiden Bytes werden ausgeblendet, untere werden gesendet
-	uart_send_16bit(data & 0xffff);
-	// Obere Bytes werden auf untere Postion verschoben, füllt obere mit Nullen
-	// Ausblenden der neuen oberen Bytes zur Sicherheit
-	uart_send_16bit((data >> 16) & 0xffff);
-}
+
 
 unsigned char uart_rec(void)
 {
@@ -55,12 +48,31 @@ unsigned char uart_rec(void)
 	return UDR0;
 }
 
+// UART-ISR um Schlittenpositionen zu senden
+void uart_interrupt_init(void)
+{
+	// Alle 16ms bei prescaler 1024;
+	OCR0A = 249;
+	
+	// Clear COM0A1 + COM0A0 for disconnecting OC0A. Usable for Normal port operation (p. 126)
+	TCCR0A &= ~((1<<COM0A1) | (1<<COM0A0));
+	
+	TCCR0A |= (1<<WGM01);
+	
+	TCCR0B = (1<<CS02) | (1<<CS00);
+	
+	// Enable Timer-ISR
+	TIMSK0 |= (1<<OCIE0A);
+	
+}
 
+// Pollt regelmäßig die UART-Nutzereingabe (HTerm), bis der Buffer (32 Zeichen) voll ist 
+// oder ein Nullterminator registriert wird. Baudrate sollte nicht zu hoch gewählt sein, da wir ansonsten HTerm verpassen
 void UserInputHandler_poll_input(UserInputHandler* handler)
 {
-
 	if (handler->status == INPUT_INCOMPLETED && handler->bufidx < 32)
 	{
+		// Ist was im Buffer?
 		if (UCSR0A & (1 << RXC0))
 		{
 			char c = UDR0;
@@ -71,24 +83,29 @@ void UserInputHandler_poll_input(UserInputHandler* handler)
 			{
 				handler->second_row_at = handler->bufidx;
 				uint8_t fill = 16-handler->bufidx;
+			
+				// Pad restliche Eingabe mit Leerzeichen
 				for (uint8_t i = 0; i < fill; i++)
 				{
 					handler->input_buffer[handler->bufidx+i] = ' ';
 				}
 				handler->bufidx += fill;
 			}
+
+			// Puffer die Nutzereingabe
 			else
 			{
 				handler->input_buffer[handler->bufidx] = c;
 				++handler->bufidx;
 			}
 			
-			
+			// Nullterminator wird registriert. Eingabe somit komplett
 			if (c == '\0')
 			{
 				handler->status = INPUT_COMPLETED;
 			}
 			
+			// Eingabe überschreitet 32 Buchstaben. Füge Nullterminator hinzu und Eingabe ist somit komplett
 			else if (handler->bufidx == 32)
 			{
 				handler->input_buffer[handler->bufidx] = '\0';
@@ -101,70 +118,7 @@ void UserInputHandler_poll_input(UserInputHandler* handler)
 void UserInputHandler_reset_input(UserInputHandler* handler)
 {
 	handler->bufidx = 0;
-	handler->second_row_at = 17;
+	handler->second_row_at = 16;
 	handler->status = INPUT_INCOMPLETED;
 }
 
-
-//______________________________________
-// Zum Testen
-
-
-unsigned char uart_rec_u(void)
-{
-	while(!(UCSR0A & (1<<RXC0)));
-	
-	return UDR0;
-	
-}
-
-uint8_t uart_get(void)
-{
-	while(!(UCSR0A & (1<<RXC0)));
-	
-	return UDR0;
-	
-}
-
-
-void uart_gets( char* Buffer, uint8_t MaxLen )
-{
-	uint8_t NextChar;
-	uint8_t StringLen = 0;
-
-	NextChar = uart_get();         // Warte auf und empfange das nächste Zeichen
-
-	// Sammle solange Zeichen, bis:
-	// * entweder das String Ende Zeichen kam
-	// * oder das aufnehmende Array voll ist
-	while( NextChar != '\0' && StringLen < MaxLen - 1 ) {
-		*Buffer++ = NextChar;
-		StringLen++;
-		NextChar = uart_get();
-	}
-
-	// Noch ein '\0' anhängen um einen Standard
-	// C-String daraus zu machen
-	*Buffer = '\0';
-}
-
-
-
-int uart_putc(unsigned char c)
-{
-	while (!(UCSR0A & (1<<UDRE0)))  /* warten bis Senden moeglich */
-
-	UDR0 = c;                      /* sende Zeichen */
-	return 0;
-}
-
-
-/* puts ist unabhaengig vom Controllertyp */
-void uart_puts (char *s)
-{
-	while (*s)
-	{   /* so lange *s != '\0' also ungleich dem "String-Endezeichen(Terminator)" */
-		uart_putc(*s);
-		s++;
-	}
-}

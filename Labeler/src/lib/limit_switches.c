@@ -2,14 +2,14 @@
  * limit_switches.c
  *
  * Created: 25.05.2022 16:58:08
- *  Author: ruwen
+ *  Author: ruwen & Oli
  */ 
 
 #include "limit_switches.h"
 
 void limit_swiches_init(void)
 {
-	_delay_ms(100);
+	_delay_ms(100); // Die Endlagenschalter verhalten sich einfach komisch am Anfang
 	
 	// PD2 als Eingang
 	BitClear(DDRD, X_LEFT_LIM_PIN);
