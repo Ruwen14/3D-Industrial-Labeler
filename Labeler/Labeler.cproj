@@ -183,19 +183,7 @@
     <Compile Include="src\lib\limit_switches.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\lib\linefunctions.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\lib\movement.c">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="src\lib\movement.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\lib\StepperAxisController.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\lib\StepperAxisController.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\lib\StepperMotionAxisController.c">
@@ -204,25 +192,10 @@
     <Compile Include="src\lib\StepperMotionAxisController.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\lib\Test.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="src\lib\uart.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\lib\uart.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\lib\XYAxisController.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\lib\XYAxisController.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\lib\ZAxisController.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\lib\ZAxisController.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\main.c">
